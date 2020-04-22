@@ -1,0 +1,905 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Podrida</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script>
+            $(function () {
+                var on = false;
+                window.setInterval(function () {
+                    on = !on;
+                    if (on) {
+                        $('.invalid').addClass('invalid-blink')
+                    } else {
+                        $('.invalid-blink').removeClass('invalid-blink')
+                    }
+                }, 500);
+            });</script>
+        <script type="text/javascript">
+            window.onbeforeunload = function () {
+                return "Seguro?";
+            };
+        </script>
+        <script type="text/javascript">
+            function onLoadFunction() {
+                $("#configDiv").hide();
+                $("#pregameContainer").hide();
+                $("#gameContainer").hide();
+                vaciarMensaje();
+            }
+        </script>
+        <script type="text/javascript">
+            var userId;
+            var username;
+            var orden;
+            var jugadores = [];
+            var imagenesCartas;
+            var jugable = false;
+            var pedidas = 0;
+            var cantBazas = 0;
+            var cantCartas = 0;
+            var repartidor = 0;
+            var sndEnabled = false;
+            var imagenesCargadas = false;
+            function processIncomingMessage(rawMsg) {
+                vaciarMensaje();
+                var msg = JSON.parse(rawMsg);
+                var status = msg.status;
+                var code = msg.code;
+                var content = msg.content;
+                switch (code) {
+                    case 0:
+                        processJoinGameReply(status, content);
+                        break;
+                    case 1:
+                        processGetPlayersReply(status, content);
+                        break;
+                    case 2:
+                        processStartGameReply(status, content);
+                        break;
+                    case 3:
+                        processGetTableReply(status, content);
+                        break;
+                    case 4:
+                        processPlayCardReply(status, content);
+                        break;
+                    case 5:
+                        processChooseNumberReply(status, content);
+                        break;
+                    case 6:
+                        processDealReply(status, content);
+                        break;
+                    case 7:
+                    case 8:
+                    case 9:
+                        mensaje(content);
+                        break;
+                    case 10:
+                        processGameConfigReply(status, content);
+                        break;
+                    case 80:
+                        chatMessage(status, content);
+                        break;
+                    case 90:
+                        processConnectionChange(status, content);
+                        break;
+                    default:
+                        mensaje(content);
+                }
+                ;
+            }
+            ;
+            function processJoinGameReply(status, content) {
+                if (status) {
+                    if (content.hasOwnProperty('userId')) {
+                        userId = content.userId;
+                        username = $("#nombreInput").val();
+                        mensaje("Conectado, esperando otros jugadores.");
+                        $("#nombreContainer").remove();
+                        $("#pregameContainer").show();
+                    } else {
+                        mensaje("Restaurando juego, por favor esperar la descarga de los recursos");
+                        recargarDatosJuego(content.datos);
+                        ;
+                    }
+                } else {
+                    socket.close();
+                    mensaje(content);
+                    //                alert(content);
+                    $("#nombreButton").prop('disabled', false);
+                }
+            }
+            ;
+            function processGetPlayersReply(status, content) {
+                if (status) {
+                    var players = JSON.parse(content);
+                    var html = "<table class='bordered'><th class='bordered'>Nombre</th><th class='bordered'>Estado</th>";
+                    $("#configDiv").hide();
+                    for (var x in players) {
+                        html += "<tr class='bordered'>";
+                        if (x > 1) {
+                            jugable = true;
+                        }
+                        var user = players[x];
+                        html += "<td class='bordered'>" + user.name + "</td>";
+                        html += "<td class='bordered'>" + (user.status ? "Listo para empezar ya" : "Esperando otros jugadores...") + "</td>";
+                        html += "</tr>";
+                        if (x == 0 && (user.name === username || user.name === $("#nombreInput").val())) {
+                            $("#configDiv").show();
+                        }
+                    }
+                    html += "</table>";
+                    $("#listaJugadores").empty().append(html);
+                    vaciarMensaje(content);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processGameConfigReply(status, content) {
+                if (status) {
+                    $("#configInfo").empty().append(content);
+                    mensaje("Se ha cambiado la configuracion del juego.");
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processStartGameReply(status, content) {
+                if (status) {
+                    mensaje("Cargando, por favor esperar la descarga de los recursos...");
+                    startGame(content);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processGetTableReply(status, content) {
+                if (status) {
+                    closeTable();
+                    var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    htmlContent += "<table class='bordered'>";
+                    for (var x in content) {
+                        var array = content[x];
+                        var firstSquare = array[0];
+                        htmlContent += "<tr class='bordered'>";
+                        htmlContent += "<td class='bordered'>" + firstSquare + "</td>";
+                        if (isNaN(firstSquare)) { //row de texto
+                            for (var y = 1; y < array.length; y++) {
+                                htmlContent += "<td align='center' class='bordered' colspan='2'>" + array[y] + "</td>";
+                            }
+                        } else { //row de puntos
+                            for (var y = 1; y < array.length; y++) {
+                                var jo = array[y];
+                                htmlContent += "<td align='center' ";
+                                if (jo.puntera) {
+                                    htmlContent += "bgcolor='#A0FFA0' ";
+                                } else if (jo.ultima) {
+                                    htmlContent += "bgcolor='#FFA0A0' ";
+                                } else {
+                                    htmlContent += "bgcolor='#FFFFFF' ";
+                                }
+                                htmlContent += "class='bordered";
+                                if (jo.tachado) {
+                                    htmlContent += " crossed";
+                                }
+                                htmlContent += "'>";
+                                htmlContent += jo.acumulado;
+                                htmlContent += "</td>";
+                                htmlContent += "<td align='center'>";
+                                htmlContent += jo.bazas + "/" + jo.pedido;
+                                htmlContent += "</td>";
+                            }
+                        }
+                        htmlContent += "</tr>";
+                    }
+                    htmlContent += "</table>";
+                    htmlContent += "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    $("#tableContainer").empty().append(htmlContent);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processPlayCardReply(status, content) {
+                if (status) {
+                    mensaje(jugadores[content.jugador] + " jugo la carta " + content.cartaJugada.substring(1));
+                    cardPlayed(content.jugador, content.cartaJugada, false);
+                    setTurn(content.turnoActual);
+                    if (content.hasOwnProperty('ganadorBaza')) {
+                        tirable = false;
+                        setTimeout(clearPlayedCards, 2000);
+                        if (content.hasOwnProperty('puntajes')) {
+                            if (content.hasOwnProperty('end')) { //ultima baza de la ultima ronda terminada
+                                addBaza(content.ganadorBaza, content.bazasActuales);
+                                updateScores(content.puntajes);
+                                mensaje("Fin del juego!");
+                                cantCartas = 0;
+                                setTimeout(verTabla, 2000);
+                                setTimeout(setImagenesCargadas, 2000, false);
+                                alert("Imagenes de naipes cortesia de .com/nallera");
+                            } else { //ultima baza de esta ronda terminada
+                                addBaza(content.ganadorBaza, content.bazasActuales);
+                                updateScores(content.puntajes);
+                                repartidor = content.turnoActual;
+                                if (content.turnoActual == orden) {
+                                    mensaje("Te toca repartir");
+                                }
+                                setTimeout(solicitarRepartirClick, 2000);
+                            }
+                        } else { //baza normal terminada
+                            addBaza(content.ganadorBaza, content.bazasActuales);
+                            setTurn(content.turnoActual);
+                            if (content.turnoActual == orden) {
+                                //deberia ser yo si gane la baza
+                                playSound();
+                                mensaje("Te toca tirar");
+                            }
+                        }
+                    } else { //proxima jugada de esta baza
+                        if (content.turnoActual == orden) {
+                            playSound();
+                            mensaje("Te toca tirar");
+                        }
+                    }
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processChooseNumberReply(status, content) {
+                if (status) {
+                    var apodoNumero;
+                    pedidas += content.numero;
+                    prohibido = cantBazas - pedidas;
+                    var mensajeMaximo = "<br>no podria<br>pedir " + prohibido;
+                    if (prohibido < 0) {
+                        mensajeMaximo = "<br>puede pedir<br>cualquiera";
+                    }
+                    document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + jugadores[repartidor] + mensajeMaximo;
+
+                    switch (content.numero) {
+                        case 0:
+                            apodoNumero = "serapioo";
+                            break;
+                        case 1:
+                            apodoNumero = "unescooo";
+                            break;
+                        case 2:
+                            apodoNumero = "duquesaa";
+                            break;
+                        case 3:
+                            apodoNumero = "tricotaa";
+                            break;
+                        case 4:
+                            apodoNumero = "cuaternaa";
+                            break;
+                        case 5:
+                            apodoNumero = "kentuckyy";
+                            break;
+                        case 6:
+                            apodoNumero = "hexapiii";
+                            break;
+                        default:
+                            apodoNumero = content.numero;
+                    }
+                    mensaje(jugadores[content.jugador] + " eligio " + apodoNumero);
+                    setTurn(content.turnoActual);
+                    setBaza(content.jugador, content.numero);
+                    if (content.hasOwnProperty("mensaje")) {
+                        mensaje(content.mensaje);
+                        document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + content.mensaje;
+                        if (content.turnoActual == orden) {
+                            playSound();
+//                            mensaje("Te toca tirar");
+                        }
+                    } else {
+                        if (content.turnoActual == orden) {
+                            playSound();
+                            if (content.hasOwnProperty("numeroNoValido")) {
+                                mensaje("Te toca elegir un numero. No puede ser el " + content.numeroNoValido);
+                            } else {
+                                mensaje("Te toca elegir un numero cualquiera.");
+                            }
+                        }
+                    }
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+
+            function processDealReply(status, content) {
+                if (status) {
+                    setTurn(content.turnoActual);
+                    pedidas = 0;
+                    tirable = false;
+                    clearPlayedCards();
+                    if (content.hasOwnProperty('rondaIndia')) {
+                        createIndianCardSpace(content.cartasJugadores);
+                    } else {
+                        createCardSpace(content.cartas);
+                    }
+                    if (content.turnoActual == orden) {
+                        playSound();
+                        mensaje("Te toca elegir un numero");
+                    }
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+
+            function closeTable() {
+                $("#tableContainer").empty().append("-");
+            }
+
+            function vaciarMensaje() {
+                $("#responseContainer").empty().append("-");
+            }
+            ;
+
+            function chatMessage(status, content) {
+                if (status) {
+                    var oldChat = $("#chatContainerNew").html();
+                    $("#chatContainerOld").empty().append(oldChat);
+                    $("#chatContainerNew").empty().append(content);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processConnectionChange(status, content) {
+                if (status) {
+                    var element = document.getElementById("square_" + content.nombre);
+                    if (content.conexion) {
+                        alert(content.nombre + ' se reconecto');
+                        element.classList.remove("crossed");
+                    } else {
+                        alert(content.nombre + ' ha perdido conexion');
+                        element.classList.add("crossed");
+                    }
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function setImagenesCargadas(booleanValue) {
+                imagenesCargadas = booleanValue;
+            }
+            ;
+            function recargarDatosJuego(datos) {
+                if (!imagenesCargadas) {
+                    mensajeAppend(".");
+                    setTimeout(recargarDatosJuego, 50, datos);
+                    return;
+                }
+                $("#nombreContainer").remove();
+                $("#pregameContainer").remove();
+
+                cantCartas = datos.cantCartas;
+                userId = datos.userId;
+                username = datos.username;
+                pedidas = datos.pedidas;
+                sndEnabled = false;
+                jugable = true;
+                prepararTablero(datos.tablero);
+                datosJugadores = datos.datosJugadores;
+                for (var x in datosJugadores) {
+                    var datosJugador = datosJugadores[x];
+                    var nombreJugador = datosJugador.nombre;
+                    if (nombreJugador === username) {
+                        orden = x;
+                    }
+                    jugadores.push(nombreJugador);
+                    cardPlayedNamed(nombreJugador, datosJugador.cartaJugada, false);
+                    if (datosJugador.bazasPedidas !== -1) {
+                        setBazaNamed(nombreJugador, datosJugador.bazasPedidas);
+                        addBazaNamed(nombreJugador, datosJugador.bazasGanadas);
+                    }
+                }
+                createCardSpace(datos.cartas);
+                setTurn(datos.turno);
+                if (datos.turno == orden) {
+                    solicitarRepartirClick();
+                }
+                $("#gameContainer").show();
+            }
+            ;
+            function mensaje(msg) {
+                $("#responseContainer").empty().append(msg);
+            }
+            ;
+            function mensajeAppend(msg) {
+                $("#responseContainer").append(msg);
+            }
+            ;
+
+            var socket = null;
+            var socketOnline = false;
+            function socketSend(msg) {
+                if (socket !== null && socketOnline) {
+                    //socket.readtState:
+                    //0 – “CONNECTING”: the connection has not yet been established,
+                    //1 – “OPEN”: communicating,
+                    //2 – “CLOSING”: the connection is closing,
+                    //3 – “CLOSED”: the connection is closed.
+                    var mens = JSON.stringify(msg);
+                    socket.send(mens);
+                } else {
+                    mensaje("No se encontro conexion");
+                }
+            }
+            ;
+
+            function startGame(param) {
+                if (!imagenesCargadas) {
+                    mensajeAppend(".");
+                    setTimeout(startGame, 50, param);
+                    return;
+                }
+                vaciarMensaje();
+                $("#pregameContainer").remove();
+                $("#gameContainer").show();
+                cantCartas = param.cantCartas;
+                jugadores = param.jugadores;
+                for (var x in jugadores) {
+                    if (jugadores[x] === username) {
+                        orden = x;
+                        break;
+                    }
+                }
+                prepararTablero(param.tablero);
+                setTurn(0);
+                repartidor = 0;
+                if (orden == 0) {
+                    mensaje("Te toca repartir");
+                    solicitarRepartirClick();
+                }
+            }
+            ;
+
+            function prepararTablero(tablero) {
+                $("#gameContainer").empty();
+                $("#gameContainer").append(tablero);
+                clearPlayedCards();
+            }
+            ;
+
+            function clearPlayedCards() {
+                for (var x in jugadores) {
+                    var element = document.getElementById("img_" + jugadores[x]);
+                    element.innerHTML = getImagenCarta("blank");
+                    element.classList.remove("unpadded-bordered");
+                    element.classList.add("bordered");
+                }
+                permitirTirar();
+            }
+            ;
+            function getImagenCarta(carta) {
+                if (carta === "blank") {
+                    if (imagenesCartas === undefined || imagenesCartas[carta] === undefined) {
+                        return "<img alt='-'/>";
+                    }
+                    return imagenesCartas[carta];
+                }
+                if (carta === "unknown") {
+                    if (imagenesCartas === undefined || imagenesCartas[carta] === undefined) {
+                        return "<img alt='?'/>";
+                    }
+                    return imagenesCartas[carta];
+                }
+                if (imagenesCartas === undefined || imagenesCartas[carta.substring(1)] === undefined) {
+                    return "<img alt='" + carta.substring(1) + "'/>";
+                }
+                return imagenesCartas[carta.substring(1)];
+            }
+            ;
+            function cardPlayed(jugador, carta, transparent) {
+                cardPlayedNamed(jugadores[jugador], carta, transparent);
+            }
+            ;
+            function cardPlayedNamed(jugador, carta, transparent) {
+                var element = document.getElementById("img_" + jugador);
+                element.innerHTML = getImagenCarta(carta);
+                document.getElementById("img_" + jugador)
+                if (carta === "blank") {
+                    element.classList.remove("unpadded-bordered");
+                    element.classList.add("bordered");
+                } else {
+                    element.classList.remove("bordered");
+                    element.classList.add("unpadded-bordered");
+                    if(transparent){
+                        element.classList.add("transparent");
+                    } else {
+                        element.classList.remove("transparent");
+                    }
+                }
+                var elem = document.getElementById("card_" + carta);
+                //quito la carta del cardspace      
+                if (elem !== undefined && elem !== null) {
+                    elem.innerHTML = getImagenCarta("blank");
+                    elem.classList.remove("unpadded-bordered");
+                    elem.classList.add("bordered");
+                }
+                //en el caso de que fuera carta unknown, la quito tambien
+                if(jugador === username){
+                    var indianElem = document.getElementById("card_unknown");
+                    if (indianElem !== undefined && indianElem !== null) {
+                        indianElem.innerHTML = getImagenCarta("blank");
+                        indianElem.classList.remove("unpadded-bordered");
+                        indianElem.classList.add("bordered");
+                    }
+                }
+            }
+            ;
+            function updateScores(puntajes) {
+                borrarBazasElegidas();
+                for (var x in jugadores) {
+                    var nombreJugador = jugadores[x];
+                    var puntajeJugador = puntajes[nombreJugador];
+                    var puntajeJugadorDom = document.getElementById("pts_" + nombreJugador);
+                    puntajeJugadorDom.innerHTML = puntajeJugador.total;
+                    if (puntajeJugador.puntero) {
+                        puntajeJugadorDom.setAttribute("bgcolor", '#A0FFA0');
+                    } else if (puntajeJugador.ultimo) {
+                        puntajeJugadorDom.setAttribute("bgcolor", '#FFA0A0');
+                    } else {
+                        puntajeJugadorDom.setAttribute("bgcolor", '#FFFFFF');
+                    }
+                }
+            }
+            ;
+            function borrarBazasElegidas() {
+                for (var x in jugadores) {
+                    var elem = document.getElementById("bazas_" + jugadores[x]);
+                    elem.innerHTML = "-";
+                    elem.setAttribute("bgcolor", '#FFFFFF');
+                }
+            }
+            ;
+            function setBaza(jugador, valor) {
+                setBazaNamed(jugadores[jugador], valor);
+            }
+            ;
+            function setBazaNamed(jugador, valor) {
+                var elem = document.getElementById("bazas_" + jugador);
+                elem.innerHTML = "0/" + valor;
+                elem.setAttribute("bgcolor", valor === 0 ? '#A0FFA0' : '#FFA0A0');
+            }
+            ;
+            function addBaza(jugador, cant) {
+                addBazaNamed(jugadores[jugador], cant);
+            }
+            ;
+            function addBazaNamed(jugador, cant) {
+                var elem = document.getElementById("bazas_" + jugador);
+                var elems = elem.innerHTML.split("/");
+                var pedido = Number(elems[1]);
+                elem.innerHTML = cant + "/" + pedido;
+                elem.setAttribute("bgcolor", cant === pedido ? '#A0FFA0' : '#FFA0A0');
+            }
+            ;
+//            function addBaza(jugador) {
+//                var elem = document.getElementById("bazas_" + jugadores[jugador]);
+//                var elems = elem.innerHTML.split("/");
+//                var nuevoValor = Number(elems[0]) + 1;
+//                var pedido = Number(elems[1]);
+//                elem.innerHTML = nuevoValor + "/" + pedido;
+//                elem.setAttribute("bgcolor", nuevoValor === pedido ? '#A0FFA0' : '#FFA0A0');
+//            }
+//            ;
+
+            function toggleSound() {
+//              document.getElementById("sndChk").checked;
+                sndEnabled = !sndEnabled;
+            }
+            ;
+
+            function playSound() {
+                if (sndEnabled) {
+                    document.getElementById('buzzer').play();
+                }
+            }
+            ;
+
+            function setTurn(jugador) {
+                for (var x in jugadores) {
+                    var element = document.getElementById("img_" + jugadores[x]);
+                    element.classList.remove("invalid");
+                }
+                if (jugador !== -1) {
+                    document.getElementById("img_" + jugadores[jugador]).classList.add("invalid");
+                }
+            }
+            ;
+            function createIndianCardSpace(cartasJugadores) {
+                for (var x in cartasJugadores) {
+                    cardPlayedNamed(x, cartasJugadores[x], true);
+                }
+                createCardSpace(["unknown"]);
+            }
+            ;
+            function createCardSpace(cartasAMostrar) {
+                cantBazas = cartasAMostrar.length;
+                document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas;
+                var appendable = "";
+                //            appendable += "<button id='btnRepartir' onclick='solicitarRepartirClick()'>REPARTIR</button>";
+                appendable += "<button id='btnAguita' onclick='decirAguita()'>AGUITA</button>";
+                appendable += "<button id='btnJugaronReMal' onclick='decirJugaronReMal()'>JUGARON MAL</button>";
+                appendable += "<button id='btnSiJugamosBien' onclick='decirSiJugamosBien()'>SI JUGAMOS BIEN</button>";
+                appendable += "<button id='btnVerTabla' onclick='verTabla()'>TABLA</button>";
+                appendable += "<button id='btnChat' onclick='sendChatClick()'>CHAT</button>";
+                appendable += "<input id='sndChk' onclick='toggleSound()' type='checkbox'";
+                if (sndEnabled) {
+                    appendable += " checked ";
+                }
+                appendable += ">SONIDO";
+                appendable += "<table>";
+                for (var x in cartasAMostrar) {
+                    appendable += "<td onmouseover='' style='cursor: pointer;' id='card_" + cartasAMostrar[x] + "' onclick='solicitarTirarClick(\"" + cartasAMostrar[x] + "\")' align='center' class='unpadded-bordered'>" + getImagenCarta(cartasAMostrar[x]) + "</td>";
+                }
+                appendable += "</tr><tr>";
+                for (var i = 0; i <= cartasAMostrar.length; i++) {
+                    appendable += "<td><button style='width:100%;' id='choose_" + i + "' onclick='solicitarElegirClick(" + i + ")'>Pedir ";
+                    appendable += i;
+                    appendable += "</button></td>";
+                }
+                appendable += "</tr></table><br>";
+                $("#cardSpace").empty().append(appendable);
+            }
+            ;
+
+            var tirable = true;
+            function permitirTirar() {
+                tirable = true;
+            }
+            ;
+            function solicitarTirarClick(carta) {
+                if (!tirable) {
+                    return;
+                }
+                tirable = false;
+                setTimeout(permitirTirar, 2000);
+                vaciarMensaje();
+                mensaje("Enviando " + carta);
+                var data = {id: userId, com: "4", param: carta};
+                socketSend(data);
+            }
+            ;
+
+            function solicitarElegirClick(n) {
+                vaciarMensaje();
+                mensaje("Pidiendo llevarse " + n);
+                var data = {id: userId, com: "5", param: n};
+                socketSend(data);
+            }
+            ;
+
+            function solicitarRepartirClick() {
+                vaciarMensaje();
+                mensaje("Repartiendo....");
+                var data = {id: userId, com: "6", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function decirAguita() {
+                vaciarMensaje();
+                var data = {id: userId, com: "7", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function decirJugaronReMal() {
+                vaciarMensaje();
+                var data = {id: userId, com: "8", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function decirSiJugamosBien() {
+                vaciarMensaje();
+                var data = {id: userId, com: "9", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function verTabla() {
+                vaciarMensaje();
+                var data = {id: userId, com: "3", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function sendChatClick() {
+                var param = prompt("Mensaje a enviar");
+                if (param != null) {
+                    var data = {id: userId, com: "80", param: param};
+                    socketSend(data);
+                }
+            }
+            ;
+
+            function configurarJuegoClick() {
+                var params = {"ultimaRondaIndia": document.getElementById("ultimaRondaIndiaChk").checked, "cantBarajas": $("#cantBarajas").val()};
+                var data = {id: userId, com: "10", param: JSON.stringify(params)};
+                socketSend(data);
+            }
+            ;
+
+            function solicitarIniciarClick() {
+                if (jugable) {
+                    vaciarMensaje();
+                    $("#solicitarIniciarButton").prop('disabled', true);
+                    mensaje("Marcaste listo para empezar!");
+                    var data = {id: userId, com: "2", param: ""};
+                    socketSend(data);
+                } else {
+                    mensaje("Aun no hay suficientes jugadores");
+                }
+            }
+            ;
+
+            function nombreButtonClick() {
+                setImagenesCargadas(false);
+                $("#nombreButton").prop('disabled', true);
+                vaciarMensaje();
+                $.post('http://' + window.location.host + '/podrida?name=' + $("#nombreInput").val()).done(function (data) {
+                    if (data === "Nombre libre") {
+                        if (socketOnline) {
+                            return;
+                        }
+                        if (socket === null) {
+                            openSocket();
+                        }
+                    } else {
+                        mensaje(data);
+                        $("#nombreButton").prop('disabled', false);
+                    }
+                })
+                        .fail(function () {
+                            $("#nombreButton").prop('disabled', false);
+                            mensaje("Error de conexion");
+                        });
+                $.post('http://' + window.location.host + '/podrida?sonido').done(function (data) {
+                    var sonido = JSON.parse(data);
+                    $("#audioDiv").append(sonido.soundfile);
+                })
+                        .fail(function () {
+                            mensaje("Error de conexion");
+                        });
+                $.post('http://' + window.location.host + '/podrida?cartas').done(function (data) {
+                    imagenesCartas = JSON.parse(data);
+                    setImagenesCargadas(true);
+                })
+                        .fail(function () {
+                            mensaje("Error de conexion");
+                        });
+            }
+            ;
+
+            function openSocket() {
+                //            console.log('trying to connect...');
+                var wsPort = $("#wsPort").val().trim();
+                if (wsPort.length === 0 || isNaN(wsPort) || wsPort.includes('-') || wsPort.includes('.')) {
+                    mensaje("El puerto es inválido.");
+                    $("#nombreButton").prop('disabled', false);
+                    return;
+                }
+                try {
+                    //        let
+                    socket = new WebSocket("ws:" + window.location.hostname + ":" + wsPort);
+                    //                console.log('set ip');
+                } catch (e) {
+                    //                console.log("asdasasddsa");
+                    mensaje(e.message);
+                    $("#nombreButton").prop('disabled', false);
+                    return;
+                }
+
+                socket.onopen = function (e) { //esto se dispara ni bien se abre el socket
+                    //                alert("[open] Connection established");
+                    socketOnline = true;
+                    vaciarMensaje();
+                    var data = {id: "", com: "0", param: $("#nombreInput").val()};
+                    socketSend(data);
+                };
+                socket.onmessage = function (event) { //se dispara al recibir datos del server
+                    processIncomingMessage(event.data);
+                };
+                socket.onclose = function (event) {
+                    if (event.wasClean) {
+                        //                    alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                    } else {
+                        // e.g. server process killed or network down
+                        // event.code is usually 1006 in this case
+                        //                    alert('[close] Connection died');
+                    }
+                    $("#nombreButton").prop('disabled', false);
+                    socket = null;
+                    socketOnline = false;
+                };
+                socket.onerror = function (error) {
+                    var msg = error.message;
+                    if (msg === undefined) {
+                        msg = "Error en la conexion.";
+                        socket = null;
+                        socketOnline = false;
+                        $("#nombreButton").prop('disabled', false);
+                    }
+                    mensaje(msg);
+                };
+            }
+            ;
+        </script>
+        <style>
+            .invalid-blink {
+                background-color: blue;
+            }
+            .bordered {
+                padding: 10px;
+                border: 1px solid black; 
+                border-collapse: collapse;
+            }
+            .unpadded-bordered {
+                border: 1px solid black; 
+                border-collapse: collapse;
+            }
+            .transparent {
+                opacity: 0.5;
+            }
+            .crossed
+            {
+                background-image: linear-gradient(to bottom right,  transparent calc(50% - 1px), black, transparent calc(50% + 1px)); 
+            }
+        </style>
+    </head>
+    <body onload="onLoadFunction()">
+        <div id="masterContainer">
+            <div id="responseContainer">-</div>
+            <div id="chatContainerOld">-</div>
+            <div id="chatContainerNew">-</div>
+            <div id="nombreContainer">
+                <div>Puerto de juego<input maxlength="5" id="wsPort" /></div>
+                <div>Nombre</div>
+                <div>
+                    <input id="nombreInput" maxlength="20"/>
+                    <button id="nombreButton" onclick="nombreButtonClick()">
+                        Ingresar
+                    </button>
+                </div>
+            </div>
+            <div id="pregameContainer">
+                <div>Esperando otros jugadores. Presionar el botón para solicitar iniciar.</div>
+                <div>Cuando todos los jugadores presionen el botón, el juego comenzará.</div>
+                <br>
+                <button id="solicitarIniciarButton" onclick="solicitarIniciarClick()">
+                    Solicitar inicio con los que estamos
+                </button>
+                <br>
+                <div id="configInfo">El juego esta configurado en 1 baraja y sin ronda final india.</div>
+                <div id="configDiv"> Barajas
+                    <select id="cantBarajas">
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                    </select>
+                    <input id="ultimaRondaIndiaChk" type="checkbox"> Ultima ronda india
+                    <button id="configurarJuegoButton" onclick="configurarJuegoClick()">
+                        Configurar juego
+                    </button>
+                </div>
+                <br>
+                <div id="listaJugadores"></div>
+            </div>
+            <div id="tableContainer">-</div>
+            <div id="gameContainer">
+                <div>Juego</div>
+            </div>
+        </div>
+        <div id="audioDiv"></div>
+    </body>
+</html>
