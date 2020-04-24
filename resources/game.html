@@ -289,6 +289,7 @@
                     setTurn(content.turnoActual);
                     setBaza(content.jugador, content.numero);
                     if (content.hasOwnProperty("mensaje")) {
+                        document.getElementById("botonesPedido").remove();
                         mensaje(content.mensaje);
                         document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + content.mensaje;
                         if (content.turnoActual == orden) {
@@ -640,7 +641,7 @@
                 for (var x in cartasAMostrar) {
                     appendable += "<td onmouseover='' style='cursor: pointer;' id='card_" + cartasAMostrar[x] + "' onclick='solicitarTirarClick(\"" + cartasAMostrar[x] + "\")' align='center' class='bordered'>" + getImagenCarta(cartasAMostrar[x]) + "</td>";
                 }
-                appendable += "</tr><tr>";
+                appendable += "</tr><tr id='botonesPedido'>";
                 for (var i = 0; i <= cartasAMostrar.length; i++) {
                     appendable += "<td><button style='width:100%;' id='choose_" + i + "' onclick='solicitarElegirClick(" + i + ")'>Pedir ";
                     appendable += i;
