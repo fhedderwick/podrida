@@ -9,7 +9,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import static java.lang.Math.abs;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 import podrida.model.Instruccion;
@@ -50,17 +52,26 @@ public class Utils {
         }
         return -1;
     }
-
-    public static String readFile(final String resourcesloginhtml) {
+    
+    public static String readFile(final String filePath) {
         final StringBuilder sb = new StringBuilder();
+        final List<String> lines = readFileLines(filePath);
+        for(final String line : lines){
+            sb.append(line).append(System.lineSeparator());
+        }
+        return sb.toString();
+    }
+
+    public static List<String> readFileLines(final String filePath) {
+        final List list = new ArrayList<>();
         try {
-            final File file = new File(resourcesloginhtml);
+            final File file = new File(filePath);
             final FileInputStream fis = new FileInputStream(file);
             final InputStreamReader isr = new InputStreamReader(fis);
             final BufferedReader br = new BufferedReader(isr);
             String line;
             while ((line = br.readLine()) != null) {
-                sb.append(line).append(System.lineSeparator());
+                list.add(line);
             }
             br.close();
             isr.close();
@@ -68,7 +79,7 @@ public class Utils {
         } catch (final Exception e) {
             e.printStackTrace();
         }
-        return sb.toString();
+        return list;
     }
 
     public static boolean containsStrangeCharacters(final String parametro) {

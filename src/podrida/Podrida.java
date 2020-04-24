@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import podrida.utils.MensajesEstandar;
 
 public class Podrida {
 
@@ -18,10 +19,15 @@ public class Podrida {
             port = Utils.parsearNumero(args[0]);
             wsPort = Utils.parsearNumero(args[1]);
             if(port < 0 || wsPort < 0){
+                System.out.println("Error en los parametros");
                 return;
             }
         } 
-        
+        MensajesEstandar.loadMessages("resources/mensajes.txt");
+        if(!MensajesEstandar.isLoaded()){
+            System.out.println("No se encontro el archivo de mensajes");
+            return;
+        }
         final HttpServer server = HttpServer.create(new InetSocketAddress(port), maxConnections);
         server.createContext("/podrida", new PodridaHandler(wsPort,maxConnections));
         server.setExecutor(null); // creates a default executor

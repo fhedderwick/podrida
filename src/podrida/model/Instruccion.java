@@ -10,9 +10,7 @@ public enum Instruccion {
     TIRAR_CARTA(4),
     ELEGIR_NUMERO(5),
     REPARTIR(6),
-    DECIR_AGUITA(7),
-    DECIR_JUGARON_RE_MAL(8),
-    DECIR_SI_JUGAMOS_BIEN(9),
+    MENSAJE_ESTANDAR(7),
     CONFIGURAR_JUEGO(10),
     ENVIAR_MENSAJE(80),
     INFORMAR_CAMBIO_CONEXION(90),
@@ -29,9 +27,7 @@ public enum Instruccion {
                 case 4: return TIRAR_CARTA;
                 case 5: return ELEGIR_NUMERO;
                 case 6: return REPARTIR;
-                case 7: return DECIR_AGUITA;
-                case 8: return DECIR_JUGARON_RE_MAL;
-                case 9: return DECIR_SI_JUGAMOS_BIEN;
+                case 7: return MENSAJE_ESTANDAR;
                 case 10: return CONFIGURAR_JUEGO;
                 case 80: return ENVIAR_MENSAJE;
                 case 90: return INFORMAR_CAMBIO_CONEXION;

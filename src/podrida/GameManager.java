@@ -149,31 +149,11 @@ public class GameManager {
                     WebSocket.broadcastCartasIndias(_juego.getJugadores(),reply);
                 }
                 return null;
-            case DECIR_AGUITA:
+            case MENSAJE_ESTANDAR:
                 if(!hasStarted()){
                     return Utils.createJsonReply(false, instruccion,"Aun no ha empezado la partida");
                 }
-                reply =  _juego.decirAguita(idSolicitante);
-                if(!reply.get("status").getAsBoolean()){
-                    return reply;
-                }
-                WebSocket.broadcast(_juego.getJugadores(), reply);
-                return null;
-            case DECIR_JUGARON_RE_MAL: 
-                if(!hasStarted()){
-                    return Utils.createJsonReply(false, instruccion,"Aun no ha empezado la partida");
-                }
-                reply =  _juego.decirJugaronReMal(idSolicitante);
-                if(!reply.get("status").getAsBoolean()){
-                    return reply;
-                }
-                WebSocket.broadcast(_juego.getJugadores(), reply);
-                return null;
-            case DECIR_SI_JUGAMOS_BIEN:
-                if(!hasStarted()){
-                    return Utils.createJsonReply(false, instruccion,"Aun no ha empezado la partida");
-                }
-                reply =  _juego.decirSiJugamosBien(idSolicitante);
+                reply =  _juego.decirMensajeEstandar(idSolicitante,parametro);
                 if(!reply.get("status").getAsBoolean()){
                     return reply;
                 }

@@ -72,8 +72,6 @@
                         processDealReply(status, content);
                         break;
                     case 7:
-                    case 8:
-                    case 9:
                         mensaje(content);
                         break;
                     case 10:
@@ -627,9 +625,9 @@
                 document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas;
                 var appendable = "";
                 //            appendable += "<button id='btnRepartir' onclick='solicitarRepartirClick()'>REPARTIR</button>";
-                appendable += "<button id='btnAguita' onclick='decirAguita()'>AGUITA</button>";
-                appendable += "<button id='btnJugaronReMal' onclick='decirJugaronReMal()'>JUGARON MAL</button>";
-                appendable += "<button id='btnSiJugamosBien' onclick='decirSiJugamosBien()'>SI JUGAMOS BIEN</button>";
+                appendable += "<button id='btnAguita' onclick='mensajeEstandar(0)'>AGUITA</button>";
+                appendable += "<button id='btnJugaronReMal' onclick='mensajeEstandar(1)'>JUGARON MAL</button>";
+                appendable += "<button id='btnSiJugamosBien' onclick='mensajeEstandar(2)'>SI JUGAMOS BIEN</button>";
                 appendable += "<button id='btnVerTabla' onclick='verTabla()'>TABLA</button>";
                 appendable += "<button id='btnChat' onclick='sendChatClick()'>CHAT</button>";
                 appendable += "<input id='sndChk' onclick='toggleSound()' type='checkbox'";
@@ -686,23 +684,12 @@
             }
             ;
 
-            function decirAguita() {
+            function mensajeEstandar(param) {
+                if(isNaN(param)){
+                    return;
+                }
                 vaciarMensaje();
-                var data = {id: userId, com: "7", param: ""};
-                socketSend(data);
-            }
-            ;
-
-            function decirJugaronReMal() {
-                vaciarMensaje();
-                var data = {id: userId, com: "8", param: ""};
-                socketSend(data);
-            }
-            ;
-
-            function decirSiJugamosBien() {
-                vaciarMensaje();
-                var data = {id: userId, com: "9", param: ""};
+                var data = {id: userId, com: "7", param: param};
                 socketSend(data);
             }
             ;

@@ -8,6 +8,7 @@ import podrida.model.Mazo;
 import podrida.model.Carta;
 import java.util.List;
 import podrida.model.Instruccion;
+import podrida.utils.MensajesEstandar;
 import podrida.utils.Utils;
 
 public class Partida {
@@ -190,28 +191,16 @@ public class Partida {
         return Utils.createJsonReply(false,Instruccion.ELEGIR_NUMERO,"No es tu turno");
     }
     
-    public JsonObject decirAguita(final String idJugadorElector) {
-        final Jugador jugadorElector = getJugador(idJugadorElector);
-        if(jugadorElector == null){
-            return Utils.createJsonReply(false,Instruccion.DECIR_AGUITA,"Jugador desconocido");
+    public JsonObject decirMensajeEstandar(final String idJugadorPeticionante, final String parametro) {
+        final Jugador jugadorPeticionante = getJugador(idJugadorPeticionante);
+        if(jugadorPeticionante == null){
+            return Utils.createJsonReply(false,Instruccion.MENSAJE_ESTANDAR,"Jugador desconocido");
         }
-        return Utils.createJsonReply(true, Instruccion.DECIR_AGUITA, jugadorElector.getNombre() + ": \"Aguita a esa!\"");
-    }
-    
-    public JsonObject decirJugaronReMal(final String idJugadorElector) {
-        final Jugador jugadorElector = getJugador(idJugadorElector);
-        if(jugadorElector == null){
-            return Utils.createJsonReply(false,Instruccion.DECIR_JUGARON_RE_MAL,"Jugador desconocido");
+        final String mensaje = MensajesEstandar.get(parametro);
+        if(mensaje == null){
+            return Utils.createJsonReply(false,Instruccion.MENSAJE_ESTANDAR,"No se encontro el mensaje solicitado");
         }
-        return Utils.createJsonReply(true, Instruccion.DECIR_JUGARON_RE_MAL, jugadorElector.getNombre() + ": \"Jugaron re mal!\"");
-    }
-    
-    public JsonObject decirSiJugamosBien(final String idJugadorElector) {
-        final Jugador jugadorElector = getJugador(idJugadorElector);
-        if(jugadorElector == null){
-            return Utils.createJsonReply(false,Instruccion.DECIR_SI_JUGAMOS_BIEN,"Jugador desconocido");
-        }
-        return Utils.createJsonReply(true, Instruccion.DECIR_SI_JUGAMOS_BIEN, jugadorElector.getNombre() + ": \"Si jugamos bien cumplimos todos!\"");
+        return Utils.createJsonReply(true, Instruccion.MENSAJE_ESTANDAR, jugadorPeticionante.getNombre() + ": \"" + mensaje + "\"");
     }
     
     public JsonObject enviarMensaje(final String idJugadorElector, final String mensaje) {
