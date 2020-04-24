@@ -11,12 +11,15 @@ public class PodridaHandler implements HttpHandler {
     
     private final static String GET = "GET";
     private final static String POST = "POST";
+    private final static String WS_PORT_PLACEHOLDER = "###WS_PORT###";
     
+    private final int _wsPort;
     private final GameManager _gameManager;
     private final JsonObject _encodedSoundReply = Utils.encodeSound("resources/buzzer.ogg");
     private final JsonObject _encodedImagesReply = Utils.encodeImages("resources/cards/");
     
-    public PodridaHandler(final int maxPlayers){
+    public PodridaHandler(final int wsPort, final int maxPlayers){
+        _wsPort = wsPort;
         _gameManager = new GameManager(maxPlayers);
     }
     
@@ -36,7 +39,7 @@ public class PodridaHandler implements HttpHandler {
             responseAsString = _tabla.getPuntajes().toString();
             
             */
-            responseAsString = Utils.readFile("resources/game.html");
+            responseAsString = Utils.readFile("resources/game.html").replace(WS_PORT_PLACEHOLDER, String.valueOf(_wsPort));
             System.out.println("quitar esta manera!");//Se lee cada vez para soportar cambios on the fly, podria sacarse luego de que el frontend quede listo
         } else if(POST.equals(method)){
             final String query = t.getRequestURI().getQuery().trim();

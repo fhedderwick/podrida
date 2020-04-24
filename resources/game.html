@@ -783,15 +783,9 @@
 
             function openSocket() {
                 //            console.log('trying to connect...');
-                var wsPort = $("#wsPort").val().trim();
-                if (wsPort.length === 0 || isNaN(wsPort) || wsPort.includes('-') || wsPort.includes('.')) {
-                    mensaje("El puerto es inválido.");
-                    $("#nombreButton").prop('disabled', false);
-                    return;
-                }
                 try {
                     //        let
-                    socket = new WebSocket("ws:" + window.location.hostname + ":" + wsPort);
+                    socket = new WebSocket("ws:" + window.location.hostname + ":###WS_PORT###");
                     //                console.log('set ip');
                 } catch (e) {
                     //                console.log("asdasasddsa");
@@ -865,7 +859,6 @@
             <div id="chatContainerOld">-</div>
             <div id="chatContainerNew">-</div>
             <div id="nombreContainer">
-                <div>Puerto de juego<input maxlength="5" id="wsPort" /></div>
                 <div>Nombre</div>
                 <div>
                     <input id="nombreInput" maxlength="20"/>

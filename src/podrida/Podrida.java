@@ -14,15 +14,16 @@ public class Podrida {
     private static int maxConnections = 10;
     
     public static void main(final String[] args) throws Exception {
-        if(args.length > 0){
+        if(args.length == 2){
             port = Utils.parsearNumero(args[0]);
-            if(port < 0){
+            wsPort = Utils.parsearNumero(args[1]);
+            if(port < 0 || wsPort < 0){
                 return;
             }
         } 
         
         final HttpServer server = HttpServer.create(new InetSocketAddress(port), maxConnections);
-        server.createContext("/podrida", new PodridaHandler(maxConnections));
+        server.createContext("/podrida", new PodridaHandler(wsPort,maxConnections));
         server.setExecutor(null); // creates a default executor
         server.start();
         
