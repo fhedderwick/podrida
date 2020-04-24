@@ -25,14 +25,16 @@ public abstract class Board {
     
     protected static String createSquare(final String name){
         final StringBuilder sb = new StringBuilder();
-        sb.append("<table class='bordered'>");
+        sb.append("<table id='table_");
+        sb.append(name);
+        sb.append("' class='bordered padded'>");
         sb.append("<tr id='square_");
         sb.append(name);
-        sb.append("' class='bordered'><td align='center' colspan='3'>");
+        sb.append("' class='bordered padded'><td align='center' colspan='3'>");
         sb.append(name);
         sb.append("</td></tr>");
-        sb.append("<tr class='bordered'><td align='center'>Bazas</td>");
-        sb.append("<td align='center' class='bordered' height='50' rowspan='2' id='img_").append(name).append("'>");
+        sb.append("<tr class='bordered padded'><td align='center'>Bazas</td>");
+        sb.append("<td align='center' class='bordered padded' height='50' rowspan='2' id='img_").append(name).append("'>");
         sb.append("</td>");
         sb.append("<td align='center'>Pts</td></tr>");
         sb.append("<tr><td align='center' id='bazas_").append(name).append("'");

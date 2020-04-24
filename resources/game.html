@@ -115,16 +115,16 @@
             function processGetPlayersReply(status, content) {
                 if (status) {
                     var players = JSON.parse(content);
-                    var html = "<table class='bordered'><th class='bordered'>Nombre</th><th class='bordered'>Estado</th>";
+                    var html = "<table class='bordered padded'><th class='bordered padded'>Nombre</th><th class='bordered padded'>Estado</th>";
                     $("#configDiv").hide();
                     for (var x in players) {
-                        html += "<tr class='bordered'>";
+                        html += "<tr class='bordered padded'>";
                         if (x > 1) {
                             jugable = true;
                         }
                         var user = players[x];
-                        html += "<td class='bordered'>" + user.name + "</td>";
-                        html += "<td class='bordered'>" + (user.status ? "Listo para empezar ya" : "Esperando otros jugadores...") + "</td>";
+                        html += "<td class='bordered padded'>" + user.name + "</td>";
+                        html += "<td class='bordered padded'>" + (user.status ? "Listo para empezar ya" : "Esperando otros jugadores...") + "</td>";
                         html += "</tr>";
                         if (x == 0 && (user.name === username || user.name === $("#nombreInput").val())) {
                             $("#configDiv").show();
@@ -160,15 +160,15 @@
                 if (status) {
                     closeTable();
                     var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
-                    htmlContent += "<table class='bordered'>";
+                    htmlContent += "<table class='bordered padded'>";
                     for (var x in content) {
                         var array = content[x];
                         var firstSquare = array[0];
-                        htmlContent += "<tr class='bordered'>";
-                        htmlContent += "<td class='bordered'>" + firstSquare + "</td>";
+                        htmlContent += "<tr class='bordered padded'>";
+                        htmlContent += "<td class='bordered padded'>" + firstSquare + "</td>";
                         if (isNaN(firstSquare)) { //row de texto
                             for (var y = 1; y < array.length; y++) {
-                                htmlContent += "<td align='center' class='bordered' colspan='2'>" + array[y] + "</td>";
+                                htmlContent += "<td align='center' class='bordered padded' colspan='2'>" + array[y] + "</td>";
                             }
                         } else { //row de puntos
                             for (var y = 1; y < array.length; y++) {
@@ -181,7 +181,7 @@
                                 } else {
                                     htmlContent += "bgcolor='#FFFFFF' ";
                                 }
-                                htmlContent += "class='bordered";
+                                htmlContent += "class='bordered padded";
                                 if (jo.tachado) {
                                     htmlContent += " crossed";
                                 }
@@ -219,7 +219,7 @@
                                 cantCartas = 0;
                                 setTimeout(verTabla, 2000);
                                 setTimeout(setImagenesCargadas, 2000, false);
-                                alert("Imagenes de naipes cortesia de .com/nallera");
+                                setTimeout(mensaje, 2200, "Imagenes de naipes cortesia de .com/nallera");
                             } else { //ultima baza de esta ronda terminada
                                 addBaza(content.ganadorBaza, content.bazasActuales);
                                 updateScores(content.puntajes);
@@ -464,16 +464,19 @@
             function prepararTablero(tablero) {
                 $("#gameContainer").empty();
                 $("#gameContainer").append(tablero);
+                remarcarCuadroTablero();
                 clearPlayedCards();
             }
             ;
-
+            function remarcarCuadroTablero(){
+                document.getElementById("table_" + username).classList.add("thick-bordered");
+                document.getElementById("table_" + username).classList.remove("bordered");
+            };
             function clearPlayedCards() {
                 for (var x in jugadores) {
                     var element = document.getElementById("img_" + jugadores[x]);
                     element.innerHTML = getImagenCarta("blank");
-                    element.classList.remove("unpadded-bordered");
-                    element.classList.add("bordered");
+                    element.classList.add("padded");
                 }
                 permitirTirar();
             }
@@ -506,11 +509,9 @@
                 element.innerHTML = getImagenCarta(carta);
                 document.getElementById("img_" + jugador)
                 if (carta === "blank") {
-                    element.classList.remove("unpadded-bordered");
-                    element.classList.add("bordered");
+                    element.classList.add("padded");
                 } else {
-                    element.classList.remove("bordered");
-                    element.classList.add("unpadded-bordered");
+                    element.classList.remove("padded");
                     if(transparent){
                         element.classList.add("transparent");
                     } else {
@@ -521,16 +522,14 @@
                 //quito la carta del cardspace      
                 if (elem !== undefined && elem !== null) {
                     elem.innerHTML = getImagenCarta("blank");
-                    elem.classList.remove("unpadded-bordered");
-                    elem.classList.add("bordered");
+                    elem.classList.add("padded");
                 }
                 //en el caso de que fuera carta unknown, la quito tambien
                 if(jugador === username){
                     var indianElem = document.getElementById("card_unknown");
                     if (indianElem !== undefined && indianElem !== null) {
                         indianElem.innerHTML = getImagenCarta("blank");
-                        indianElem.classList.remove("unpadded-bordered");
-                        indianElem.classList.add("bordered");
+                        indianElem.classList.add("padded");
                     }
                 }
             }
@@ -639,7 +638,7 @@
                 appendable += ">SONIDO";
                 appendable += "<table>";
                 for (var x in cartasAMostrar) {
-                    appendable += "<td onmouseover='' style='cursor: pointer;' id='card_" + cartasAMostrar[x] + "' onclick='solicitarTirarClick(\"" + cartasAMostrar[x] + "\")' align='center' class='unpadded-bordered'>" + getImagenCarta(cartasAMostrar[x]) + "</td>";
+                    appendable += "<td onmouseover='' style='cursor: pointer;' id='card_" + cartasAMostrar[x] + "' onclick='solicitarTirarClick(\"" + cartasAMostrar[x] + "\")' align='center' class='bordered'>" + getImagenCarta(cartasAMostrar[x]) + "</td>";
                 }
                 appendable += "</tr><tr>";
                 for (var i = 0; i <= cartasAMostrar.length; i++) {
@@ -839,12 +838,14 @@
             .invalid-blink {
                 background-color: blue;
             }
-            .bordered {
-                padding: 10px;
-                border: 1px solid black; 
+            .thick-bordered {
+                border: 5px solid black;
                 border-collapse: collapse;
             }
-            .unpadded-bordered {
+            .padded {
+                padding: 10px;
+            }
+            .bordered {
                 border: 1px solid black; 
                 border-collapse: collapse;
             }
