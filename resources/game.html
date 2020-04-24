@@ -591,7 +591,6 @@
 //            ;
 
             function toggleSound() {
-//              document.getElementById("sndChk").checked;
                 sndEnabled = !sndEnabled;
             }
             ;
@@ -624,13 +623,16 @@
                 cantBazas = cartasAMostrar.length;
                 document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas;
                 var appendable = "";
-                //            appendable += "<button id='btnRepartir' onclick='solicitarRepartirClick()'>REPARTIR</button>";
-                appendable += "<button id='btnAguita' onclick='mensajeEstandar(0)'>AGUITA</button>";
-                appendable += "<button id='btnJugaronReMal' onclick='mensajeEstandar(1)'>JUGARON MAL</button>";
-                appendable += "<button id='btnSiJugamosBien' onclick='mensajeEstandar(2)'>SI JUGAMOS BIEN</button>";
-                appendable += "<button id='btnVerTabla' onclick='verTabla()'>TABLA</button>";
-                appendable += "<button id='btnChat' onclick='sendChatClick()'>CHAT</button>";
-                appendable += "<input id='sndChk' onclick='toggleSound()' type='checkbox'";
+//                appendable += "<button onclick='solicitarRepartirClick()'>REPARTIR</button>";
+                appendable += "<button onclick='mensajeEstandar(0)'>AGUITA</button>";
+                appendable += "<button onclick='mensajeEstandar(1)'>JUGARON MAL</button>";
+                appendable += "<button onclick='mensajeEstandar(2)'>SI JUGAMOS BIEN</button>";
+                appendable += "<button onclick='mensajeEstandar(3)'>FARAONICO</button>";
+                appendable += "<button onclick='mensajeEstandar(4)'>ASI NO</button>";
+                appendable += "<button onclick='mensajeEstandar(5)'>LA QUIERE</button>";
+                appendable += "<button onclick='verTabla()'>TABLA</button>";
+                appendable += "<button onclick='sendChatClick()'>CHAT</button>";
+                appendable += "<input onclick='toggleSound()' type='checkbox'";
                 if (sndEnabled) {
                     appendable += " checked ";
                 }
