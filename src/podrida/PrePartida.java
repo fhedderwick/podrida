@@ -1,5 +1,6 @@
 package podrida;
 
+import podrida.model.User;
 import com.google.gson.JsonObject;
 import podrida.model.Jugador;
 import java.util.ArrayList;
@@ -18,11 +19,12 @@ public class PrePartida {
         _candidatos = new ArrayList<>();
     }
     
-    public synchronized Jugador agregarJugador(final String nombre) {
+    public synchronized Jugador agregarJugador(final ClientThread clientThread) {
         if(_candidatos.size() >= _maxPlayers){
             return null;
         }
-        final Jugador jugador = new Jugador(nombre);
+        final Jugador jugador = new Jugador(clientThread);
+        System.out.println("Registrado a " + jugador.getUsername() + " en " + clientThread.getRemoteAddress());
         _candidatos.add(jugador);
 //        System.out.println("quitar este mock"); _candidatos.addAll(Jugador.mockJugadores(5));
         return jugador;
@@ -49,7 +51,7 @@ public class PrePartida {
 
     public boolean nombreExiste(final String nombre) {
         for(final Jugador candidato : _candidatos){
-            if(candidato.getNombre().equals(nombre)){
+            if(candidato.getUsername().equals(nombre)){
                 return true;
             }
         }
@@ -58,7 +60,7 @@ public class PrePartida {
 
     public String pedirEmpezar(final String idSolicitante) {
         for(final Jugador jugador : _candidatos){
-            if(jugador.getId().equals(idSolicitante)){
+            if(jugador.getUserToken().equals(idSolicitante)){
                 if(!jugador.pedirEmpezar()){
                     return "Ya fue solicitado anteriormente";
                 }
@@ -72,12 +74,32 @@ public class PrePartida {
         return _candidatos;
     }
     
-    public void quitarCandidato(final Jugador jugador){
-        _candidatos.remove(jugador);
+    public List<ClientThread> getOnlineThreadsCandidatos(){
+        final List<ClientThread> clientThreads = new ArrayList<>();
+        for(final Jugador candidato : _candidatos){
+            final ClientThread clientThread = candidato.getClientThread();
+            if(clientThread != null && clientThread.isConnected()){
+                clientThreads.add(candidato.getClientThread());
+            }
+        }
+        return clientThreads;
+    }
+    
+    public void quitarCandidato(final ClientThread clientThread){
+        Jugador jugadorAQuitar = null;
+        for(final Jugador jugador : _candidatos){
+            if(jugador.getClientThread().equals(clientThread)){
+                jugadorAQuitar = jugador;
+                break;
+            }
+        }
+        if(jugadorAQuitar != null){
+            _candidatos.remove(jugadorAQuitar);
+        }
     }
 
     public JsonObject setGameParams(final String idSolicitante, final String parametros) {
-        if(!_candidatos.get(0).getId().equals(idSolicitante)){
+        if(!_candidatos.get(0).getUserToken().equals(idSolicitante)){
             return Utils.createJsonReply(false,Instruccion.CONFIGURAR_JUEGO,"Solo valido para primer jugador entrante");
         }
         _configuracion = Configuracion.crearConfiguracion(parametros);
@@ -89,6 +111,19 @@ public class PrePartida {
     
     public String getMensajeConfiguracion(){
         return _configuracion != null ? _configuracion.getMessage() : "Juego aun no configurado";
+    }
+
+    public Jugador getCandidatoByUser(final User user) {
+        for(final Jugador jugador : _candidatos){
+            if(jugador.getUsername().equals(user.getUsername())){
+                return jugador;
+            }
+        }
+        return null;
+    }
+
+    public void reemplazarThread(final Jugador jugador, final ClientThread invoker) {
+        jugador.replaceClientThread(invoker);
     }
 
 }

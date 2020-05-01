@@ -1,31 +1,35 @@
 package podrida;
 
+import podrida.managers.PodridaManager;
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.List;
+import podrida.managers.GameManager;
+import podrida.model.User;
 
 public class ClientThread extends Thread{
 
-    final Socket _client;
+    final Socket _socket;
     private final OutputStream _out;
     private final InputStream _in;
-    private final GameManager _gameManager;
-    private String _clientName = "";
+    private final PodridaManager _gameManager;
+    private User _user;
     private final String _remoteAddress;
     private final String _clientIp;
     private final int _port;
+    private boolean _connected;
     
-    public ClientThread(final Socket client, final InputStream in, final OutputStream out, final GameManager gameManager) {
-        _client = client;
-        _remoteAddress = _client.getRemoteSocketAddress().toString();
-        _clientIp = _client.getInetAddress().toString();
-        _port = _client.getPort();
+    public ClientThread(final Socket socket, final InputStream in, final OutputStream out, final GameManager gameManager) {
+        _socket = socket;
+        _remoteAddress = _socket.getRemoteSocketAddress().toString();
+        _clientIp = _socket.getInetAddress().toString();
+        _port = _socket.getPort();
         _in = in;
         _out = out;
-        _gameManager = gameManager;
+        _gameManager = (PodridaManager) gameManager;
     }
     
     @Override
@@ -57,12 +61,12 @@ public class ClientThread extends Thread{
                     }
                 }
             }
-            System.out.println("Client disconnected OK");
+            System.out.println("Client at " + _remoteAddress + " disconnected OK");
             _gameManager.desconexion(this);
         } catch (final IOException e) {
 //            line=this.getName(); //reused String line for getting thread name
             e.printStackTrace();
-            System.out.println("IO Error/ Client terminated abruptly");
+            System.out.println("IO Error/ Client at " + _remoteAddress + " terminated abruptly");
             _gameManager.desconexion(this);
         }
     }
@@ -85,7 +89,7 @@ public class ClientThread extends Thread{
     private void attendText(final String framePayload) throws IOException{
         final JsonObject jo = _gameManager.processRequest(this,framePayload);
         if(jo != null){
-            System.out.println("Enviando a " + _clientName + ": " + jo.toString());
+            System.out.println("Enviando a " + (_user != null ? _user.getUsername() : "(desconocido)") + ": " + jo.toString());
             write(jo.toString());
         }
     }
@@ -93,7 +97,7 @@ public class ClientThread extends Thread{
         
     }
     private void attendClose()throws IOException{
-        _client.close();
+        _socket.close();
 //        todo
     }
     
@@ -118,16 +122,36 @@ public class ClientThread extends Thread{
         }
     }
     
-    public void setClientName(final String clientName){
-        _clientName = clientName;
-    }
-
     public String getRemoteAddress() {
         return _remoteAddress;
     }
 
     public String getClientIp(){
         return _clientIp;
+    }
+
+    public User getUser() {
+        return _user;
+    }
+
+    public void associateUser(final User user) {
+        _user = user;
+    }
+
+    public String getUsername() {
+        return _user.getUsername();
+    }
+
+    public String getUserToken() {
+        return _user.getToken();
+    }
+
+    public boolean isConnected() {
+        return _connected;
+    }
+
+    public void setConnected(final boolean val) {
+        _connected = val;
     }
     
 }

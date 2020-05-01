@@ -2,18 +2,22 @@ package podrida;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.util.ArrayList;
 import podrida.model.puntajes.Tabla;
 import podrida.model.Jugador;
 import podrida.model.Mazo;
 import podrida.model.Carta;
 import java.util.List;
+import podrida.model.Espectador;
 import podrida.model.Instruccion;
+import podrida.model.User;
 import podrida.utils.MensajesEstandar;
 import podrida.utils.Utils;
 
 public class Partida {
 
     private final List<Jugador> _jugadores;
+    private final List<Espectador> _espectadores;
     private final Configuracion _configuracion;
     private final Mazo _mazo;
     private final Tabla _tabla;
@@ -31,10 +35,17 @@ public class Partida {
 
     public Partida(final List<Jugador> jugadores, final Configuracion configuracion) {
         _jugadores = jugadores;
+        _espectadores = new ArrayList<>();
         _configuracion = configuracion;
         _jugadorTurno = 0;
         _mazo = new Mazo(configuracion.getCantBarajas());
-        _bazasDeLaRondaMaxima = _mazo.getCantMaximaCartas()/ _jugadores.size();
+        final int cantBazasMaximaForzada = _configuracion.getCantBazasMaximaForzada();
+        final int cantBazasMaximaCalculada = _mazo.getCantMaximaCartas()/ _jugadores.size();
+        if(cantBazasMaximaForzada < 3 || cantBazasMaximaForzada > cantBazasMaximaCalculada){
+            _bazasDeLaRondaMaxima = cantBazasMaximaCalculada;
+        } else {
+            _bazasDeLaRondaMaxima = cantBazasMaximaForzada;
+        }
         _tabla = new Tabla(_bazasDeLaRondaMaxima,_jugadores);
         _momentoRepartir = true;
         _momentoTirar = false;
@@ -49,7 +60,6 @@ public class Partida {
         }
         if (esElTurno(jugadorRepartidor)){
             if(_momentoRepartir) {
-                final JsonObject reply = new JsonObject();
                 if (_bazasQueDebenJugarseEstaRonda < _bazasDeLaRondaMaxima) {
                     _bazasQueDebenJugarseEstaRonda++;
                 } else {
@@ -71,12 +81,7 @@ public class Partida {
                 }
                 _momentoRepartir = false;
                 _momentoElegir = true;
-//                //BORRAR DESDE AQUI
-//                _momentoElegir = false;
-//                _momentoTirar = true;
-//                //HASTA AQUI
-                reply.addProperty("turnoActual", _jugadorTurno);
-                return Utils.createJsonReply(true,Instruccion.REPARTIR,reply);
+                return Utils.createJsonReply(true,Instruccion.REPARTIR,String.valueOf(_jugadorTurno));
             }
             return Utils.createJsonReply(false,Instruccion.REPARTIR,"No es momento de repartir");
         }
@@ -193,25 +198,44 @@ public class Partida {
     
     public JsonObject decirMensajeEstandar(final String idJugadorPeticionante, final String parametro) {
         final Jugador jugadorPeticionante = getJugador(idJugadorPeticionante);
+        final String sender;
         if(jugadorPeticionante == null){
-            return Utils.createJsonReply(false,Instruccion.MENSAJE_ESTANDAR,"Jugador desconocido");
+            sender = "Espectador";
+//            return Utils.createJsonReply(false,Instruccion.MENSAJE_ESTANDAR,"Jugador desconocido");
+        } else {
+            sender = jugadorPeticionante.getUsername();
         }
         final String mensaje = MensajesEstandar.get(parametro);
         if(mensaje == null){
             return Utils.createJsonReply(false,Instruccion.MENSAJE_ESTANDAR,"No se encontro el mensaje solicitado");
         }
-        return Utils.createJsonReply(true, Instruccion.MENSAJE_ESTANDAR, jugadorPeticionante.getNombre() + ": \"" + mensaje + "\"");
+        return Utils.createJsonReply(true, Instruccion.MENSAJE_ESTANDAR, sender + ": \"" + mensaje + "\"");
     }
     
     public JsonObject enviarMensaje(final String idJugadorElector, final String mensaje) {
-        final Jugador jugadorElector = getJugador(idJugadorElector);
-        if(jugadorElector == null){
-            return Utils.createJsonReply(false,Instruccion.ENVIAR_MENSAJE,"Jugador desconocido");
+        final Jugador jugadorPeticionante = getJugador(idJugadorElector);
+        final String sender;
+        if(jugadorPeticionante == null){
+            sender = "Espectador";
+//            return Utils.createJsonReply(false,Instruccion.ENVIAR_MENSAJE,"Jugador desconocido");
+        } else {
+            sender = jugadorPeticionante.getUsername();
         }
         if(Utils.containsStrangeCharacters(mensaje.replaceAll(" ", "").replaceAll("\\?", ""))){
             return Utils.createJsonReply(false,Instruccion.ENVIAR_MENSAJE,"Mensaje no enviable");
         }
-        return Utils.createJsonReply(true, Instruccion.ENVIAR_MENSAJE, jugadorElector.getNombre() + ": " + mensaje);
+        return Utils.createJsonReply(true, Instruccion.ENVIAR_MENSAJE, sender + ": " + mensaje);
+    }
+    
+    public JsonObject registrarEspectador(final Espectador espectador) {
+        System.out.println("Registrado espectador en " + espectador.getRemoteAddress());
+        _espectadores.add(espectador);
+        return Utils.createJsonReply(true, Instruccion.MENSAJE_ESTANDAR, "Ha entrado un espectador! Ahora son " + _espectadores.size() + " espectadores.");
+    }
+    
+    public JsonObject quitarEspectador(final Espectador espectador){
+        _espectadores.remove(espectador);
+        return Utils.createJsonReply(true, Instruccion.MENSAJE_ESTANDAR, "Se ha ido un espectador! Ahora son " + _espectadores.size() + " espectadores.");
     }
 
     private boolean esElTurno(final Jugador jugador) {
@@ -250,7 +274,7 @@ public class Partida {
 
     private Jugador getJugador(final String idJugador) {
         for(final Jugador jugador : _jugadores){
-            if(jugador.getId().equals(idJugador)){
+            if(jugador.getUserToken().equals(idJugador)){
                 return jugador;
             }
         }
@@ -298,6 +322,69 @@ public class Partida {
 
     public int getCantMaximaCartas() {
         return _mazo.getCantMaximaCartas();
+    }
+
+    public Jugador getJugadorByUser(final User user) {
+        for(final Jugador jugador : _jugadores){
+            if(jugador.getUsername().equals(user.getUsername())){
+                return jugador;
+            }
+        }
+        return null;
+    }
+    
+    public Jugador getJugadorByClientThread(final ClientThread clientThread) {
+        for(final Jugador jugador : _jugadores){
+            if(jugador.getClientThread() == clientThread){
+                return jugador;
+            }
+        }
+        return null;
+    }
+    
+    public void reemplazarThread(final Jugador jugador, final ClientThread invoker) {
+        jugador.replaceClientThread(invoker);
+    }
+    
+    public List<ClientThread> getOnlineThreadsJugadores(){
+        final List<ClientThread> clientThreads = new ArrayList<>();
+        for(final Jugador jugador : _jugadores){
+            final ClientThread jugadorThread = jugador.getClientThread();
+            if(jugadorThread != null && jugadorThread.isConnected()){
+                clientThreads.add(jugadorThread);
+            }
+        }
+        return clientThreads;
+    }
+    
+    public List<ClientThread> getOnlineThreadsEspectadores(){
+        final List<ClientThread> clientThreads = new ArrayList<>();
+        for(final Espectador espectador : _espectadores){
+            final ClientThread espectadorThread = espectador.getClientThread();
+            if(espectadorThread != null && espectadorThread.isConnected()){
+                clientThreads.add(espectadorThread);
+            }
+        }
+        return clientThreads;
+    }
+    
+    public List<ClientThread> getOnlineThreadsJugadoresYEspectadores(){
+        final List<ClientThread> clientThreads = getOnlineThreadsJugadores();
+        clientThreads.addAll(getOnlineThreadsEspectadores());
+        return clientThreads;
+    }
+    
+    public Espectador getEspectadorByClientThread(final ClientThread clientThread) {
+        for(final Espectador espectador : _espectadores){
+            if(espectador.getClientThread() == clientThread){
+                return espectador;
+            }
+        }
+        return null;
+    }
+
+    public List<Espectador> getEspectadores() {
+        return _espectadores;
     }
 
 }

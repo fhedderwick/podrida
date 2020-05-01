@@ -34,6 +34,7 @@
             var userId;
             var username;
             var orden;
+            var cantCandidatos = 0;
             var jugadores = [];
             var imagenesCartas;
             var jugable = false;
@@ -42,9 +43,9 @@
             var cantCartas = 0;
             var repartidor = 0;
             var sndEnabled = false;
-            var imagenesCargadas = false;
+            var recursosSolicitados = false;
+            var recursosDescargados = false;
             function processIncomingMessage(rawMsg) {
-                vaciarMensaje();
                 var msg = JSON.parse(rawMsg);
                 var status = msg.status;
                 var code = msg.code;
@@ -74,8 +75,14 @@
                     case 7:
                         mensaje(content);
                         break;
+                    case 8:
+                        verEstadisticasReply(status, content);
+                        break;
                     case 10:
                         processGameConfigReply(status, content);
+                        break;
+                    case 11:
+                        processEspectadorReply(status, content);
                         break;
                     case 80:
                         chatMessage(status, content);
@@ -91,28 +98,30 @@
             ;
             function processJoinGameReply(status, content) {
                 if (status) {
-                    if (content.hasOwnProperty('userId')) {
-                        userId = content.userId;
-                        username = $("#nombreInput").val();
+                    var reply = JSON.parse(content);
+                    if (reply.hasOwnProperty('userName')) {
+//                        userId = reply.userId;
+                        username = reply.userName;
                         mensaje("Conectado, esperando otros jugadores.");
-                        $("#nombreContainer").remove();
+                        $("#loginContainer").remove();
                         $("#pregameContainer").show();
                     } else {
                         mensaje("Restaurando juego, por favor esperar la descarga de los recursos");
-                        recargarDatosJuego(content.datos);
+                        recargarDatosJuego(reply.datos);
                         ;
                     }
                 } else {
                     socket.close();
                     mensaje(content);
                     //                alert(content);
-                    $("#nombreButton").prop('disabled', false);
+                    $("#guestButton").prop('disabled', false);
                 }
             }
             ;
             function processGetPlayersReply(status, content) {
                 if (status) {
                     var players = JSON.parse(content);
+                    cantCandidatos = players.length;
                     var html = "<table class='bordered padded'><th class='bordered padded'>Nombre</th><th class='bordered padded'>Estado</th>";
                     $("#configDiv").hide();
                     for (var x in players) {
@@ -124,13 +133,22 @@
                         html += "<td class='bordered padded'>" + user.name + "</td>";
                         html += "<td class='bordered padded'>" + (user.status ? "Listo para empezar ya" : "Esperando otros jugadores...") + "</td>";
                         html += "</tr>";
-                        if (x == 0 && (user.name === username || user.name === $("#nombreInput").val())) {
+                        if (x == 0 && (user.name === username)) {
                             $("#configDiv").show();
+                            cambiarMaximoBazasPosible();
                         }
                     }
                     html += "</table>";
                     $("#listaJugadores").empty().append(html);
                     vaciarMensaje(content);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function processEspectadorReply(status, content) {
+                if (status) {
+                    recargarDatosJuego(content);
                 } else {
                     mensaje(content);
                 }
@@ -156,11 +174,12 @@
             ;
             function processGetTableReply(status, content) {
                 if (status) {
+                    var reply = JSON.parse(content);
                     closeTable();
                     var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
                     htmlContent += "<table class='bordered padded'>";
-                    for (var x in content) {
-                        var array = content[x];
+                    for (var x in reply) {
+                        var array = reply[x];
                         var firstSquare = array[0];
                         htmlContent += "<tr class='bordered padded'>";
                         htmlContent += "<td class='bordered padded'>" + firstSquare + "</td>";
@@ -203,41 +222,42 @@
             ;
             function processPlayCardReply(status, content) {
                 if (status) {
-                    mensaje(jugadores[content.jugador] + " jugo la carta " + content.cartaJugada.substring(1));
-                    cardPlayed(content.jugador, content.cartaJugada, false);
-                    setTurn(content.turnoActual);
-                    if (content.hasOwnProperty('ganadorBaza')) {
+                    var reply = JSON.parse(content);
+                    mensaje(jugadores[reply.jugador] + " jugo la carta " + reply.cartaJugada.substring(1));
+                    cardPlayed(reply.jugador, reply.cartaJugada, false);
+                    setTurn(reply.turnoActual);
+                    if (reply.hasOwnProperty('ganadorBaza')) {
                         tirable = false;
                         setTimeout(clearPlayedCards, 2000);
-                        if (content.hasOwnProperty('puntajes')) {
-                            if (content.hasOwnProperty('end')) { //ultima baza de la ultima ronda terminada
-                                addBaza(content.ganadorBaza, content.bazasActuales);
-                                updateScores(content.puntajes);
+                        if (reply.hasOwnProperty('puntajes')) {
+                            if (reply.hasOwnProperty('end')) { //ultima baza de la ultima ronda terminada
+                                addBaza(reply.ganadorBaza, reply.bazasActuales);
+                                updateScores(reply.puntajes);
                                 mensaje("Fin del juego!");
                                 cantCartas = 0;
                                 setTimeout(verTabla, 2000);
-                                setTimeout(setImagenesCargadas, 2000, false);
+                                setTimeout(setRecursosDescargados, 2000, false);
                                 setTimeout(mensaje, 2200, "Imagenes de naipes cortesia de .com/nallera");
                             } else { //ultima baza de esta ronda terminada
-                                addBaza(content.ganadorBaza, content.bazasActuales);
-                                updateScores(content.puntajes);
-                                repartidor = content.turnoActual;
-                                if (content.turnoActual == orden) {
+                                addBaza(reply.ganadorBaza, reply.bazasActuales);
+                                updateScores(reply.puntajes);
+                                repartidor = reply.turnoActual;
+                                if (reply.turnoActual == orden) {
                                     mensaje("Te toca repartir");
                                 }
                                 setTimeout(solicitarRepartirClick, 2000);
                             }
                         } else { //baza normal terminada
-                            addBaza(content.ganadorBaza, content.bazasActuales);
-                            setTurn(content.turnoActual);
-                            if (content.turnoActual == orden) {
+                            addBaza(reply.ganadorBaza, reply.bazasActuales);
+                            setTurn(reply.turnoActual);
+                            if (reply.turnoActual == orden) {
                                 //deberia ser yo si gane la baza
                                 playSound();
                                 mensaje("Te toca tirar");
                             }
                         }
                     } else { //proxima jugada de esta baza
-                        if (content.turnoActual == orden) {
+                        if (reply.turnoActual == orden) {
                             playSound();
                             mensaje("Te toca tirar");
                         }
@@ -249,8 +269,9 @@
             ;
             function processChooseNumberReply(status, content) {
                 if (status) {
+                    var reply = JSON.parse(content);
                     var apodoNumero;
-                    pedidas += content.numero;
+                    pedidas += reply.numero;
                     prohibido = cantBazas - pedidas;
                     var mensajeMaximo = "<br>no podria<br>pedir " + prohibido;
                     if (prohibido < 0) {
@@ -258,7 +279,7 @@
                     }
                     document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + jugadores[repartidor] + mensajeMaximo;
 
-                    switch (content.numero) {
+                    switch (reply.numero) {
                         case 0:
                             apodoNumero = "serapioo";
                             break;
@@ -281,24 +302,24 @@
                             apodoNumero = "hexapiii";
                             break;
                         default:
-                            apodoNumero = content.numero;
+                            apodoNumero = reply.numero;
                     }
-                    mensaje(jugadores[content.jugador] + " eligio " + apodoNumero);
-                    setTurn(content.turnoActual);
-                    setBaza(content.jugador, content.numero);
-                    if (content.hasOwnProperty("mensaje")) {
+                    mensaje(jugadores[reply.jugador] + " eligio " + apodoNumero);
+                    setTurn(reply.turnoActual);
+                    setBaza(reply.jugador, reply.numero);
+                    if (reply.hasOwnProperty("mensaje")) {
                         document.getElementById("botonesPedido").remove();
-                        mensaje(content.mensaje);
-                        document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + content.mensaje;
-                        if (content.turnoActual == orden) {
+                        mensaje(reply.mensaje);
+                        document.getElementById("indicadorBazas").innerHTML = (cantBazas * jugadores.length) + "/" + cantCartas + "<br>cartas en juego<br>Pedidas: " + pedidas + "/" + cantBazas + "<br>" + reply.mensaje;
+                        if (reply.turnoActual == orden) {
                             playSound();
 //                            mensaje("Te toca tirar");
                         }
                     } else {
-                        if (content.turnoActual == orden) {
+                        if (reply.turnoActual == orden) {
                             playSound();
-                            if (content.hasOwnProperty("numeroNoValido")) {
-                                mensaje("Te toca elegir un numero. No puede ser el " + content.numeroNoValido);
+                            if (reply.hasOwnProperty("numeroNoValido")) {
+                                mensaje("Te toca elegir un numero. No puede ser el " + reply.numeroNoValido);
                             } else {
                                 mensaje("Te toca elegir un numero cualquiera.");
                             }
@@ -312,16 +333,17 @@
 
             function processDealReply(status, content) {
                 if (status) {
-                    setTurn(content.turnoActual);
+                    var reply = JSON.parse(content);
+                    setTurn(reply.turnoActual);
                     pedidas = 0;
                     tirable = false;
                     clearPlayedCards();
-                    if (content.hasOwnProperty('rondaIndia')) {
-                        createIndianCardSpace(content.cartasJugadores);
+                    if (reply.hasOwnProperty('rondaIndia')) {
+                        createIndianCardSpace(reply.cartasJugadores);
                     } else {
-                        createCardSpace(content.cartas);
+                        createCardSpace(reply.cartas);
                     }
-                    if (content.turnoActual == orden) {
+                    if (reply.turnoActual == orden) {
                         playSound();
                         mensaje("Te toca elegir un numero");
                     }
@@ -354,10 +376,10 @@
                 if (status) {
                     var element = document.getElementById("square_" + content.nombre);
                     if (content.conexion) {
-                        alert(content.nombre + ' se reconecto');
+//                        alert(content.nombre + ' se reconecto');
                         element.classList.remove("crossed");
                     } else {
-                        alert(content.nombre + ' ha perdido conexion');
+//                        alert(content.nombre + ' ha perdido conexion');
                         element.classList.add("crossed");
                     }
                 } else {
@@ -365,17 +387,14 @@
                 }
             }
             ;
-            function setImagenesCargadas(booleanValue) {
-                imagenesCargadas = booleanValue;
-            }
-            ;
-            function recargarDatosJuego(datos) {
-                if (!imagenesCargadas) {
+            function recargarDatosJuego(data) {
+                var datos = JSON.parse(data);
+                if (!recursosDescargados) {
                     mensajeAppend(".");
-                    setTimeout(recargarDatosJuego, 50, datos);
+                    setTimeout(recargarDatosJuego, 50, data);
                     return;
                 }
-                $("#nombreContainer").remove();
+                $("#loginContainer").remove();
                 $("#pregameContainer").remove();
 
                 cantCartas = datos.cantCartas;
@@ -400,11 +419,19 @@
                     }
                 }
                 createCardSpace(datos.cartas);
-                setTurn(datos.turno);
                 if (datos.turno == orden) {
                     solicitarRepartirClick();
                 }
+                if (username === undefined) {
+                    console.log("deshabilitar todos los botones");
+//                    createCardSpace(["unknown"]);
+                }
+                setTurn(datos.turno);
                 $("#gameContainer").show();
+            }
+            ;
+            function recargarDatosPropios(datos) {
+
             }
             ;
             function mensaje(msg) {
@@ -417,9 +444,8 @@
             ;
 
             var socket = null;
-            var socketOnline = false;
             function socketSend(msg) {
-                if (socket !== null && socketOnline) {
+                if (socket !== null) {
                     //socket.readtState:
                     //0 – “CONNECTING”: the connection has not yet been established,
                     //1 – “OPEN”: communicating,
@@ -434,7 +460,7 @@
             ;
 
             function startGame(param) {
-                if (!imagenesCargadas) {
+                if (!recursosDescargados) {
                     mensajeAppend(".");
                     setTimeout(startGame, 50, param);
                     return;
@@ -442,15 +468,16 @@
                 vaciarMensaje();
                 $("#pregameContainer").remove();
                 $("#gameContainer").show();
-                cantCartas = param.cantCartas;
-                jugadores = param.jugadores;
+                var reply = JSON.parse(param);
+                cantCartas = reply.cantCartas;
+                jugadores = reply.jugadores;
                 for (var x in jugadores) {
                     if (jugadores[x] === username) {
                         orden = x;
                         break;
                     }
                 }
-                prepararTablero(param.tablero);
+                prepararTablero(reply.tablero);
                 setTurn(0);
                 repartidor = 0;
                 if (orden == 0) {
@@ -463,14 +490,17 @@
             function prepararTablero(tablero) {
                 $("#gameContainer").empty();
                 $("#gameContainer").append(tablero);
-                remarcarCuadroTablero();
+                if (username !== undefined) {
+                    remarcarCuadroTablero();
+                }
                 clearPlayedCards();
             }
             ;
-            function remarcarCuadroTablero(){
+            function remarcarCuadroTablero() {
                 document.getElementById("table_" + username).classList.add("thick-bordered");
                 document.getElementById("table_" + username).classList.remove("bordered");
-            };
+            }
+            ;
             function clearPlayedCards() {
                 for (var x in jugadores) {
                     var element = document.getElementById("img_" + jugadores[x]);
@@ -511,7 +541,7 @@
                     element.classList.add("padded");
                 } else {
                     element.classList.remove("padded");
-                    if(transparent){
+                    if (transparent) {
                         element.classList.add("transparent");
                     } else {
                         element.classList.remove("transparent");
@@ -524,12 +554,27 @@
                     elem.classList.add("padded");
                 }
                 //en el caso de que fuera carta unknown, la quito tambien
-                if(jugador === username){
+                if (jugador === username) {
                     var indianElem = document.getElementById("card_unknown");
                     if (indianElem !== undefined && indianElem !== null) {
                         indianElem.innerHTML = getImagenCarta("blank");
                         indianElem.classList.add("padded");
                     }
+                }
+            }
+            ;
+            function cambiarMaximoBazasPosible() {
+                var cantBarajasElegida = $("#cantBarajas").val();
+                var min = 3;
+                var max = Math.floor((cantBarajasElegida * 40) / cantCandidatos);
+
+                var select = document.getElementById("cantBazasMaximaForzada");
+
+                $("#cantBazasMaximaForzada").empty();
+                for (var i = max; i >= min; i--) {
+                    var option = document.createElement("option");
+                    option.text = i;
+                    select.add(option);
                 }
             }
             ;
@@ -658,6 +703,9 @@
             }
             ;
             function solicitarTirarClick(carta) {
+                if(username === undefined){
+                    return;
+                }
                 if (!tirable) {
                     return;
                 }
@@ -671,6 +719,9 @@
             ;
 
             function solicitarElegirClick(n) {
+                if(username === undefined){
+                    return;
+                }
                 vaciarMensaje();
                 mensaje("Pidiendo llevarse " + n);
                 var data = {id: userId, com: "5", param: n};
@@ -687,7 +738,7 @@
             ;
 
             function mensajeEstandar(param) {
-                if(isNaN(param)){
+                if (isNaN(param)) {
                     return;
                 }
                 vaciarMensaje();
@@ -713,7 +764,7 @@
             ;
 
             function configurarJuegoClick() {
-                var params = {"ultimaRondaIndia": document.getElementById("ultimaRondaIndiaChk").checked, "cantBarajas": $("#cantBarajas").val()};
+                var params = {"ultimaRondaIndia": document.getElementById("ultimaRondaIndiaChk").checked, "cantBarajas": $("#cantBarajas").val(), "cantBazasMaximaForzada": $("#cantBazasMaximaForzada").val()};
                 var data = {id: userId, com: "10", param: JSON.stringify(params)};
                 socketSend(data);
             }
@@ -732,62 +783,21 @@
             }
             ;
 
-            function nombreButtonClick() {
-                setImagenesCargadas(false);
-                $("#nombreButton").prop('disabled', true);
-                vaciarMensaje();
-                $.post('http://' + window.location.host + '/podrida?name=' + $("#nombreInput").val()).done(function (data) {
-                    if (data === "Nombre libre") {
-                        if (socketOnline) {
-                            return;
-                        }
-                        if (socket === null) {
-                            openSocket();
-                        }
-                    } else {
-                        mensaje(data);
-                        $("#nombreButton").prop('disabled', false);
-                    }
-                })
-                        .fail(function () {
-                            $("#nombreButton").prop('disabled', false);
-                            mensaje("Error de conexion");
-                        });
-                $.post('http://' + window.location.host + '/podrida?sonido').done(function (data) {
-                    var sonido = JSON.parse(data);
-                    $("#audioDiv").append(sonido.soundfile);
-                })
-                        .fail(function () {
-                            mensaje("Error de conexion");
-                        });
-                $.post('http://' + window.location.host + '/podrida?cartas').done(function (data) {
-                    imagenesCartas = JSON.parse(data);
-                    setImagenesCargadas(true);
-                })
-                        .fail(function () {
-                            mensaje("Error de conexion");
-                        });
-            }
-            ;
-
-            function openSocket() {
-                //            console.log('trying to connect...');
+            function openSocket(token) {
                 try {
                     //        let
                     socket = new WebSocket("ws:" + window.location.hostname + ":###WS_PORT###");
-                    //                console.log('set ip');
                 } catch (e) {
-                    //                console.log("asdasasddsa");
                     mensaje(e.message);
-                    $("#nombreButton").prop('disabled', false);
                     return;
                 }
-
                 socket.onopen = function (e) { //esto se dispara ni bien se abre el socket
-                    //                alert("[open] Connection established");
-                    socketOnline = true;
                     vaciarMensaje();
-                    var data = {id: "", com: "0", param: $("#nombreInput").val()};
+                    if (token === "") {
+                        var data = {id: token, com: "11", param: ""};
+                    } else {
+                        var data = {id: token, com: "0", param: ""};
+                    }
                     socketSend(data);
                 };
                 socket.onmessage = function (event) { //se dispara al recibir datos del server
@@ -795,26 +805,203 @@
                 };
                 socket.onclose = function (event) {
                     if (event.wasClean) {
-                        //                    alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                        mensaje("Se cerro correctamente la conexion");
                     } else {
-                        // e.g. server process killed or network down
-                        // event.code is usually 1006 in this case
-                        //                    alert('[close] Connection died');
+//                        mensaje("Se cerro inesperadamente la conexion: codigo " + event.code);
                     }
-                    $("#nombreButton").prop('disabled', false);
+                    $("#guestButton").prop('disabled', false);
                     socket = null;
-                    socketOnline = false;
                 };
                 socket.onerror = function (error) {
                     var msg = error.message;
                     if (msg === undefined) {
-                        msg = "Error en la conexion.";
+                        msg = "Error en la conexion";
                         socket = null;
-                        socketOnline = false;
-                        $("#nombreButton").prop('disabled', false);
                     }
                     mensaje(msg);
                 };
+            }
+            ;
+            function leaderboardButtonClick() {
+                vaciarMensaje();
+                var data = {id: userId, com: "8", param: ""};
+                socketSend(data);
+            }
+            ;
+            function verEstadisticasReply(status, content) {
+                if (status) {
+                    alert(content);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function spectatorButtonClick() {
+                if (recursosSolicitados) {
+                    if (recursosDescargados) {
+                        openSocket("");
+                    } else {
+                        mensajeAppend(".");
+                        setTimeout(spectatorButtonClick, 5, token);
+                    }
+                } else {
+                    descargarRecursos();
+                    enterGame("");
+                }
+            }
+            ;
+            function guestButtonClick() {
+                $.post('http://' + window.location.host + '/podrida?guest=' + $("#guestNameInput").val()).done(function (data) {
+                    var reply = JSON.parse(data);
+                    if (reply.status) {
+                        enterGame(reply.content);
+                    } else {
+                        mensaje(reply.content);
+                        $("#guestButton").prop('disabled', false);
+                    }
+                }).fail(function () {
+                    $("#guestButton").prop('disabled', false);
+                    mensaje("Error de conexion");
+                });
+            }
+            ;
+            function descargarRecursos() {
+                recursosSolicitados = true;
+                mensaje("Descargando recursos");
+                $.post('http://' + window.location.host + '/podrida?resources').done(function (data) {
+                    var reply = JSON.parse(data);
+                    if (reply.status) {
+                        var content = JSON.parse(reply.content);
+                        var sonido = content.sound;
+                        imagenesCartas = content.cards;
+                        $("#audioDiv").append(sonido.soundfile);
+                        setRecursosDescargados(true);
+                    } else {
+                        mensaje("Error de conexion");
+                        recursosSolicitados = false;
+                    }
+                }).fail(function () {
+                    mensaje("Error de conexion");
+                    recursosSolicitados = false;
+                });
+            }
+            ;
+            function setRecursosDescargados(booleanValue) {
+                recursosDescargados = booleanValue;
+            }
+            ;
+            function enterGame(token) {
+                userId = token;
+                if (recursosSolicitados) {
+                    if (recursosDescargados) {
+                        openSocket(token);
+                    } else {
+                        mensajeAppend(".");
+                        setTimeout(enterGame, 5, token);
+                    }
+                } else {
+                    descargarRecursos();
+                    enterGame(token);
+                }
+            }
+            ;
+            function login(username, pass) {
+                var data = {username: username, pass: pass};
+                $.post('http://' + window.location.host + '/login', JSON.stringify(data))
+                        .done(function (data) {
+                            var reply = JSON.parse(data);
+                            var status = reply.status;
+                            var code = reply.code;
+                            var content = reply.content;
+                            if (status) {
+                                enterGame(content);
+                            } else {
+                                $("#loginButton").prop('disabled', false);
+                                mensaje(content);
+                            }
+                        }).fail(function () {
+                    $("#loginButton").prop('disabled', false);
+                    mensaje("Error de conexion");
+                });
+            }
+            ;
+            function unregisterClick() {
+                $("#unregisterButton").prop('disabled', true);
+                var username = $("#usernameInput").val();
+                var pass = $("#passInput").val();
+                if (username.length === 0 || pass.length === 0) {
+                    mensaje('Debe escribir usuario y clave');
+                    $("#unregisterButton").prop('disabled', false);
+                    return;
+                }
+
+                var param = prompt("Si desea eliminar el usuario, ingrese nuevamente la clave");
+                if (param != null && param === pass) {
+                    unregister(username, pass);
+                } else {
+                    $("#unregisterButton").prop('disabled', false);
+                    mensaje("No se eliminara el usuario");
+                }
+            }
+            function registerClick() {
+                $("#registerButton").prop('disabled', true);
+                var username = $("#usernameInput").val();
+                var pass = $("#passInput").val();
+                if (username.length === 0 || pass.length === 0) {
+                    mensaje('Debe escribir usuario y clave');
+                    $("#registerButton").prop('disabled', false);
+                    return;
+                }
+                if (username.startsWith('_')) {
+                    mensaje('El nombre de usuario no puede comenzar con "_"');
+                    $("#registerButton").prop('disabled', false);
+                    return;
+                }
+                register(username, pass);
+            }
+            ;
+            function loginClick() {
+                $("#loginButton").prop('disabled', true);
+                var username = $("#usernameInput").val();
+                var pass = $("#passInput").val();
+                if (username.length === 0 || pass.length === 0) {
+                    mensaje('Debe escribir usuario y clave');
+                    $("#loginButton").prop('disabled', false);
+                    return;
+                }
+                login(username, pass);
+            }
+            ;
+            function unregister(username, pass) {
+                var data = {username: username, pass: pass};
+                $.post('http://' + window.location.host + '/unregister', JSON.stringify(data))
+                        .done(function (data) {
+                            var reply = JSON.parse(data);
+                            var status = reply.status;
+                            var code = reply.code;
+                            var content = reply.content;
+                            $("#unregisterButton").prop('disabled', false);
+                            mensaje(content);
+                        }).fail(function () {
+                    $("#unregisterButton").prop('disabled', false);
+                    mensaje("Error de conexion");
+                });
+            }
+            ;
+            function register(username, pass) {
+                var data = {username: username, pass: pass};
+                $.post('http://' + window.location.host + '/register', JSON.stringify(data))
+                        .done(function (data) {
+                            var reply = JSON.parse(data);
+                            var status = reply.status;
+                            var code = reply.code;
+                            var content = reply.content;
+                            $("#registerButton").prop('disabled', false);
+                            mensaje(content);
+                        }).fail(function () {
+                    $("#registerButton").prop('disabled', false);
+                    mensaje("Error de conexion");
+                });
             }
             ;
         </script>
@@ -847,12 +1034,37 @@
             <div id="responseContainer">-</div>
             <div id="chatContainerOld">-</div>
             <div id="chatContainerNew">-</div>
-            <div id="nombreContainer">
-                <div>Nombre</div>
+            <div id="loginContainer">
                 <div>
-                    <input id="nombreInput" maxlength="20"/>
-                    <button id="nombreButton" onclick="nombreButtonClick()">
-                        Ingresar
+                    Usuario
+                    <input id="usernameInput" maxlength="20"/>
+                </div><br>
+                <div>
+                    Clave
+                    <input id="passInput" maxlength="20"/>
+                </div><br><div>
+                    <button id="loginButton" onclick="loginClick()">
+                        Entrar
+                    </button>
+                    <button id="registerButton" onclick="registerClick()">
+                        Registrarse
+                    </button>
+                    <button id="unregisterButton" onclick="unregisterClick()">
+                        Eliminar usuario
+                    </button>
+                </div><br>
+                <div>O bien entrar como invitado</div>
+                <div>
+                    <input id="guestNameInput" maxlength="20"/>
+                    <button id="guestButton" onclick="guestButtonClick()">
+                        Ingresar como invitado
+                    </button>
+                </div>
+                <br>
+                <div>O como espectador</div>
+                <div>
+                    <button id="spectatorButton" onclick="spectatorButtonClick()">
+                        Ingresar como espectador
                     </button>
                 </div>
             </div>
@@ -863,15 +1075,24 @@
                 <button id="solicitarIniciarButton" onclick="solicitarIniciarClick()">
                     Solicitar inicio con los que estamos
                 </button>
+                <button id="leaderboardButton" onclick="leaderboardButtonClick()">
+                    Estadisticas
+                </button>
                 <br>
-                <div id="configInfo">El juego esta configurado en 1 baraja y sin ronda final india.</div>
+                <div id="configInfo">Juego aun no configurado.</div>
                 <div id="configDiv"> Barajas
-                    <select id="cantBarajas">
+                    <select id="cantBarajas" onChange="cambiarMaximoBazasPosible()">
                         <option>1</option>
                         <option>2</option>
                         <option>3</option>
                     </select>
-                    <input id="ultimaRondaIndiaChk" type="checkbox"> Ultima ronda india
+                    <input id="ultimaRondaIndiaChk" type="checkbox" checked> Ultima ronda india
+                    Cantidad Maxima de Bazas
+                    <select id="cantBazasMaximaForzada">
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                    </select>
                     <button id="configurarJuegoButton" onclick="configurarJuegoClick()">
                         Configurar juego
                     </button>

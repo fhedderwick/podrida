@@ -3,12 +3,11 @@ package podrida.model;
 import com.google.gson.JsonArray;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import podrida.ClientThread;
 
 public class Jugador {
 
-    private final String _nombre;
-    private final String _id;
+    private ClientThread _clientThread;
     private final List<Carta> _cartas;
     private boolean _quieroEmpezar = false;
     
@@ -17,9 +16,8 @@ public class Jugador {
     private Carta _cartaJugada = null;
     private int _numeroElegido;
     
-    public Jugador(final String nombre) {
-        _nombre = nombre;
-        _id = UUID.randomUUID().toString();
+    public Jugador(final ClientThread clientThread) {
+        _clientThread = clientThread;
         _cartas = new ArrayList<>();
     }
 
@@ -41,8 +39,8 @@ public class Jugador {
         return temp;
     }
     
-    public String getNombre(){
-        return _nombre;
+    public String getUsername(){
+        return _clientThread.getUsername();
     }
     
     public void sumarBaza() {
@@ -107,19 +105,19 @@ public class Jugador {
         return _cartas.isEmpty() ? null : _cartas.remove(0);
     }
 
-    public String getId() {
-        return _id;
+    public String getUserToken() {
+        return _clientThread.getUserToken();
     }
     
-    public static List<Jugador> mockJugadores(final int cant) {
-        final List<Jugador> jugadores = new ArrayList<>();
-        for(int i=0; i<cant; i++){
-            final Jugador jugador = new Jugador("nombre_"+i);
-            jugador.pedirEmpezar();
-            jugadores.add(jugador);
-        }
-        return jugadores;
-    }
+//    public static List<Jugador> mockJugadores(final int cant) {
+//        final List<Jugador> jugadores = new ArrayList<>();
+//        for(int i=0; i<cant; i++){
+//            final Jugador jugador = new Jugador(new User("Jugador_" + i),null);
+//            jugador.pedirEmpezar();
+//            jugadores.add(jugador);
+//        }
+//        return jugadores;
+//    }
 
     public JsonArray peekCartas() {
         final JsonArray ja = new JsonArray();
@@ -131,6 +129,14 @@ public class Jugador {
 
     public void setQuieroEmpezar(final boolean b) {
         _quieroEmpezar = b;
+    }
+
+    public void replaceClientThread(final ClientThread newClientThread) {
+        _clientThread = newClientThread;
+    }
+
+    public ClientThread getClientThread() {
+        return _clientThread;
     }
     
 }

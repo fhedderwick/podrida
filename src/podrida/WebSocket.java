@@ -3,118 +3,128 @@ package podrida;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import podrida.managers.GameManager;
 import podrida.model.Carta;
+import podrida.model.Espectador;
 import podrida.model.Jugador;
+import podrida.utils.Utils;
 
 public class WebSocket {
 
-    private static final Map<ClientThread,Jugador> _clients = new HashMap<>();
-
-    public static void attendSocket(final Socket client, final GameManager gameManager) throws IOException, NoSuchAlgorithmException{
+    public synchronized static void attendSocket(final Socket socket, final GameManager gameManager) throws Exception{
+        final ClientThread clientThread = handshake(socket, gameManager);
+        gameManager.registerThread(clientThread);
+    }
+    
+    private static ClientThread handshake(final Socket socket, final GameManager gameManager) throws Exception{
         System.out.println("A client connected.");
-        InputStream in = client.getInputStream();
-        OutputStream out = client.getOutputStream();
-        Scanner s = new Scanner(in, "UTF-8");
-        String data = s.useDelimiter("\\r\\n\\r\\n").next();
-        Matcher get = Pattern.compile("^GET").matcher(data);
+        final InputStream in = socket.getInputStream();
+        final OutputStream out = socket.getOutputStream();
+        final Scanner s = new Scanner(in, "UTF-8");
+        final String data = s.useDelimiter("\\r\\n\\r\\n").next();
+        final Matcher get = Pattern.compile("^GET").matcher(data);
         if (get.find()) {
-            Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(data);
+            final Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(data);
             match.find();
-            byte[] response = ("HTTP/1.1 101 Switching Protocols\r\n"
+            final byte[] response = ("HTTP/1.1 101 Switching Protocols\r\n"
                     + "Connection: Upgrade\r\n"
                     + "Upgrade: websocket\r\n"
                     + "Sec-WebSocket-Accept: "
                     + Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest((match.group(1) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes("UTF-8")))
                     + "\r\n\r\n").getBytes("UTF-8");
             out.write(response, 0, response.length);
+            out.flush();
         }
-        final ClientThread thread = new ClientThread(client,in,out, gameManager);
-        _clients.put(thread,null);
-        thread.start();
+        return new ClientThread(socket,in,out, gameManager);
     }
     
-    public static Jugador removeClient(final ClientThread client){
-        return _clients.remove(client);
-    }
-
-    public static void broadcast(final List<Jugador> destinatarios, final JsonObject msg){
+    public static void broadcast(final List<ClientThread> destinatarios, final JsonObject msg){
         broadcast(destinatarios, msg.toString());
     }
     
-    public static void broadcast(final List<Jugador> destinatarios, final String msg){
+    public static void broadcast(final List<ClientThread> destinatarios, final String msg){
         System.out.println("Broadcasting: " + msg);
-        for(final Entry<ClientThread,Jugador> entry : _clients.entrySet()){
-            if(destinatarios.contains(entry.getValue())){
-                try{
-                    final ClientThread clientThread = entry.getKey();
-                        clientThread.write(msg);
-                }catch(final Exception e){
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    static void registerPlayer(final ClientThread invoker, final Jugador jugador) {
-        invoker.setClientName(jugador.getNombre());
-        _clients.put(invoker,jugador);
-        System.out.println("Registrado a " + jugador.getNombre() + " en " + invoker.getRemoteAddress());
-    }
-
-    static void broadcastCartas(final List<Jugador> jugadores, final JsonObject reply) {
-        final JsonObject content = reply.get("content").getAsJsonObject();
-        for(final Entry<ClientThread,Jugador> entry : _clients.entrySet()){
-            if(jugadores.contains(entry.getValue())){
-                try{
-                    final JsonArray ja = new JsonArray();
-                    for(final Carta carta : entry.getValue().verCartas()){
-                        ja.add(carta.getId());
-                    }
-                    //cuidado, que este mismo reply es el que se le manda a todos!!
-                    content.add("cartas", ja); //reemplaza el que le mandaron al anterior jugador destinatario
-                    System.out.println("Enviando a " + entry.getValue().getNombre() + ": " + reply.toString());
-                    entry.getKey().write(reply.toString());
-                }catch(final Exception e){
-                    e.printStackTrace();
-                }
+        for(final ClientThread clientThread : destinatarios){
+            try{
+                clientThread.write(msg);
+            }catch(final Exception e){
+                e.printStackTrace();
             }
         }
     }
     
-    static void broadcastCartasIndias(final List<Jugador> jugadores, final JsonObject reply) {
-        final JsonObject content = reply.get("content").getAsJsonObject();
-        content.addProperty("rondaIndia", true);
-        final JsonObject cartasJugadores = new JsonObject();
-        for(final Entry<ClientThread,Jugador> entry : _clients.entrySet()){
-            if(jugadores.contains(entry.getValue())){
-                cartasJugadores.addProperty(entry.getValue().getNombre(), entry.getValue().verCartas().get(0).getId());
+    public static void broadcastToSpectators(final int bazasEstaRonda, final List<Espectador> espectadores, final JsonObject reply){
+        final int turnoActual = reply.get("content").getAsInt();
+            try{
+                final JsonArray ja = new JsonArray();
+                for(int i=0; i<bazasEstaRonda; i++){
+                    ja.add("unknown");
+                }
+                final JsonObject content = new JsonObject();
+                content.addProperty("turnoActual",turnoActual);
+                content.add("cartas", ja);
+                reply.addProperty("content",content.toString());
+                for(final Espectador espectador : espectadores){
+                    if(espectador.isOnline()){
+                        System.out.println("Enviando a espectador en " + espectador.getRemoteAddress() + ": " + reply.toString());
+                        espectador.getClientThread().write(reply.toString());
+                    }
+                }
+            }catch(final Exception e){
+                e.printStackTrace();
+            }
+    }
+
+    public static void broadcastCartas(final List<Jugador> jugadores, final JsonObject reply) {
+        final int turnoActual = reply.get("content").getAsInt();
+        for(final Jugador jugador : jugadores){
+            try{
+                final JsonArray ja = new JsonArray();
+                for(final Carta carta : jugador.verCartas()){
+                    ja.add(carta.getId());
+                }
+                final JsonObject jsonToPlayer = Utils.copyJsonReply(reply);
+                final JsonObject content = new JsonObject();
+                content.addProperty("turnoActual",turnoActual);
+                content.add("cartas", ja);
+                jsonToPlayer.addProperty("content",content.toString());
+                System.out.println("Enviando a " + jugador.getUsername() + ": " + jsonToPlayer.toString());
+                jugador.getClientThread().write(jsonToPlayer.toString());
+            }catch(final Exception e){
+                e.printStackTrace();
             }
         }
-        for(final Entry<ClientThread,Jugador> entry : _clients.entrySet()){
-            if(jugadores.contains(entry.getValue())){
-                try{
-                    //cuidado, que este mismo reply es el que se le manda a todos!!
-                    final JsonObject copiaSinJugador = crearCopiaSinJugador(entry.getValue().getNombre(),cartasJugadores);
-                    content.add("cartasJugadores", copiaSinJugador);
-                    System.out.println("Enviando a " + entry.getValue().getNombre() + ": " + reply.toString());
-                    entry.getKey().write(reply.toString());
-                }catch(final Exception e){
-                    e.printStackTrace();
-                }
+    }
+    
+    public static void broadcastCartasIndias(final List<Jugador> jugadores, final JsonObject reply) {
+        final int turnoActual = reply.get("content").getAsInt();
+        final JsonObject cartasJugadores = new JsonObject();
+        for(final Jugador jugador : jugadores){
+            cartasJugadores.addProperty(jugador.getUsername(), jugador.verCartas().get(0).getId());
+        }
+        for(final Jugador jugador : jugadores){
+            try{
+                final JsonObject copiaSinJugador = crearCopiaSinJugador(jugador.getUsername(),cartasJugadores);
+                final JsonObject jsonToPlayer = Utils.copyJsonReply(reply);
+                final JsonObject content = new JsonObject();
+                content.addProperty("turnoActual",turnoActual);
+                content.addProperty("rondaIndia", true);
+                content.add("cartasJugadores", copiaSinJugador);
+                jsonToPlayer.addProperty("content", content.toString());
+                System.out.println("Enviando a " + jugador.getUsername() + ": " + jsonToPlayer.toString());
+                jugador.getClientThread().write(jsonToPlayer.toString());
+            }catch(final Exception e){
+                e.printStackTrace();
             }
         }
     }

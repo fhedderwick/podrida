@@ -11,6 +11,7 @@ public class Configuracion {
 
     private final boolean _ultimaRondaIndia;
     private final int _cantBarajas;
+    private final int _cantBazasMaximaForzada;
     
     public static Configuracion crearConfiguracion(final String parametros) {
         try{
@@ -24,11 +25,13 @@ public class Configuracion {
     private Configuracion() {
         _ultimaRondaIndia = false;
         _cantBarajas = 1;
+        _cantBazasMaximaForzada = -1;
     }
     
     private Configuracion(final JsonObject parametros) {
         _ultimaRondaIndia = parametros.get("ultimaRondaIndia").getAsBoolean();
         _cantBarajas = parametros.get("cantBarajas").getAsInt();
+        _cantBazasMaximaForzada = parametros.get("cantBazasMaximaForzada").getAsInt();
     }
 
     private Configuracion valid() {
@@ -36,6 +39,10 @@ public class Configuracion {
             return this;
         }
         return null;
+    }
+    
+    public int getCantBazasMaximaForzada(){
+        return _cantBazasMaximaForzada;
     }
     
     public int getCantBarajas(){

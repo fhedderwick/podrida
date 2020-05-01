@@ -11,7 +11,9 @@ public enum Instruccion {
     ELEGIR_NUMERO(5),
     REPARTIR(6),
     MENSAJE_ESTANDAR(7),
+    VER_ESTADISTICAS(8),
     CONFIGURAR_JUEGO(10),
+    REGISTRAR_ESPECTADOR(11),
     ENVIAR_MENSAJE(80),
     INFORMAR_CAMBIO_CONEXION(90),
     INSTRUCCION_DESCONOCIDA(99);
@@ -28,7 +30,9 @@ public enum Instruccion {
                 case 5: return ELEGIR_NUMERO;
                 case 6: return REPARTIR;
                 case 7: return MENSAJE_ESTANDAR;
+                case 8: return VER_ESTADISTICAS;
                 case 10: return CONFIGURAR_JUEGO;
+                case 11: return REGISTRAR_ESPECTADOR;
                 case 80: return ENVIAR_MENSAJE;
                 case 90: return INFORMAR_CAMBIO_CONEXION;
                 default:

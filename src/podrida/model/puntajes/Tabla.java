@@ -20,7 +20,7 @@ public class Tabla {
         _headerRow.addCasilla(primeraCasillaHeader);
         for(final Jugador jugador : jugadores){
             final Casilla casillaNombre = new Casilla();
-            casillaNombre.setNombre(jugador.getNombre());
+            casillaNombre.setNombre(jugador.getUsername());
             _headerRow.addCasilla(casillaNombre);
         }
         _rows.add(_headerRow);
@@ -45,7 +45,7 @@ public class Tabla {
         final List<Casilla> casillas = row.getCasillas();
         final List<Casilla> casillasAnteriores = _rows.get(_rowActual-1).getCasillas();
         int max = -50;
-        int min = 99;
+        int min = 30000;
         for(int i=1;i<casillas.size();i++){
             final JsonObject content = new JsonObject();
             final Jugador jugador = jugadores.get(i-1);
@@ -65,7 +65,7 @@ public class Tabla {
             if(acumulado > max){
                 max = acumulado;
             }
-            reply.add(jugador.getNombre(), content);
+            reply.add(jugador.getUsername(), content);
         }
         for(int i=1;i<casillas.size();i++){
             final Casilla casilla = casillas.get(i);
@@ -73,11 +73,11 @@ public class Tabla {
             casilla.setUltima(casilla.getAcumulado() == min);
         }
         for(final Jugador jugador : jugadores){
-            final JsonObject jo = reply.get(jugador.getNombre()).getAsJsonObject();
+            final JsonObject jo = reply.get(jugador.getUsername()).getAsJsonObject();
             final int total = jo.get("total").getAsInt();
             jo.addProperty("puntero", total == max);
             jo.addProperty("ultimo", total == min);
-            reply.add(jugador.getNombre(), jo);
+            reply.add(jugador.getUsername(), jo);
         }
         _rowActual++;
         

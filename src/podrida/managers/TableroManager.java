@@ -1,4 +1,4 @@
-package podrida;
+package podrida.managers;
 
 import java.util.List;
 import podrida.model.Jugador;

@@ -7,11 +7,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import static java.lang.Math.abs;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 import podrida.model.Instruccion;
@@ -20,14 +22,6 @@ public class Utils {
 
     private final static Pattern REGEX_PATTERN = Pattern.compile("^[a-zA-Z0-9_$%&()=!+@#]*$");
 
-    public static JsonObject createJsonReply(final boolean status, final String msg) {
-        final JsonObject jo = new JsonObject();
-        jo.addProperty("status", status);
-        jo.addProperty("code", Instruccion.INSTRUCCION_DESCONOCIDA.getCode());
-        jo.addProperty("content", msg);
-        return jo;
-    }
-
     public static JsonObject createJsonReply(final boolean status, final Instruccion instruccion, final String content) {
         final JsonObject jo = new JsonObject();
         jo.addProperty("status", status);
@@ -35,13 +29,17 @@ public class Utils {
         jo.addProperty("content", content);
         return jo;
     }
+    
+    public static JsonObject copyJsonReply(final JsonObject jsonObject) {
+        final JsonObject jo = new JsonObject();
+        jo.add("status", jsonObject.get("status"));
+        jo.add("code", jsonObject.get("code"));
+        jo.add("content", jsonObject.get("content"));
+        return jo;
+    }
 
     public static JsonObject createJsonReply(final boolean status, final Instruccion instruccion, final JsonElement content) {
-        final JsonObject jo = new JsonObject();
-        jo.addProperty("status", status);
-        jo.addProperty("code", instruccion.getCode());
-        jo.add("content", content);
-        return jo;
+        return createJsonReply(status,instruccion,content.toString());
     }
 
     public static int parsearNumero(final String valor) {
@@ -61,11 +59,15 @@ public class Utils {
         }
         return sb.toString();
     }
-
+    
     public static List<String> readFileLines(final String filePath) {
+        final File file = new File(filePath);
+        return readFileLines(file);
+    }
+
+    public static List<String> readFileLines(final File file) {
         final List list = new ArrayList<>();
         try {
-            final File file = new File(filePath);
             final FileInputStream fis = new FileInputStream(file);
             final InputStreamReader isr = new InputStreamReader(fis);
             final BufferedReader br = new BufferedReader(isr);
@@ -145,6 +147,29 @@ public class Utils {
 
     public static int getRandomInt(final int notIncludedMax) {
         return abs(new Random(System.currentTimeMillis()).nextInt() % notIncludedMax);
+    }
+
+    public static String readInputStream(final InputStream is, final String encoding) {
+        int read;
+        final StringBuilder sb = new StringBuilder();
+        try {
+            final InputStreamReader isr = new InputStreamReader(is, encoding);
+            while ((read = isr.read()) != -1) {
+                sb.append((char) read);
+            }
+            isr.close();
+            is.close();
+        } catch (final IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return sb.toString();
+    }
+
+    public static void mergeJsonObjects(final JsonObject target, final JsonObject dataToBeMerged) {
+        for(final Map.Entry<String, JsonElement> entry : dataToBeMerged.entrySet()){
+            target.add(entry.getKey(),entry.getValue());
+        }
     }
 
 }

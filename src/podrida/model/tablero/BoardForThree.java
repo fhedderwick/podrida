@@ -11,13 +11,13 @@ public final class BoardForThree extends Board{
         sb.append("<table>");
         sb.append("<tr>");
         sb.append("<td align='center' id='indicadorBazas'></td>");
-        sb.append("<td>").append(createSquare(jugadores.get(1).getNombre())).append("</td>");
+        sb.append("<td>").append(createSquare(jugadores.get(1).getUsername())).append("</td>");
         sb.append("<td></td>");
         sb.append("</tr>");
         sb.append("<tr>");
-        sb.append("<td>").append(createSquare(jugadores.get(2).getNombre())).append("</td>");
+        sb.append("<td>").append(createSquare(jugadores.get(2).getUsername())).append("</td>");
         sb.append("<td></td>");
-        sb.append("<td>").append(createSquare(jugadores.get(0).getNombre())).append("</td>");
+        sb.append("<td>").append(createSquare(jugadores.get(0).getUsername())).append("</td>");
         sb.append("</tr>");
         sb.append("</table>");
         return sb.toString();
