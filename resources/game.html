@@ -159,8 +159,9 @@
             ;
             function processEspectadorReply(status, content) {
                 if (status) {
+                    var data = JSON.parse(content);
                     setTimeout(heartbeat,7500);
-                    recargarDatosJuego(content);
+                    recargarDatosJuego(data);
                 } else {
                     mensaje(content);
                 }
@@ -550,11 +551,11 @@
                     element.classList.add("padded");
                 } else {
                     element.classList.remove("padded");
-//                    if (transparent) {
-//                        element.classList.add("transparent");
-//                    } else {
-//                        element.classList.remove("transparent");
-//                    }
+                    if (transparent) {
+                        element.classList.add("transparent");
+                    } else {
+                        element.classList.remove("transparent");
+                    }
                 }
                 var elem = document.getElementById("card_" + carta);
                 //quito la carta del cardspace      
