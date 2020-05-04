@@ -5,12 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import podrida.ClientThread;
 
-public class Jugador {
+public class Jugador implements Comparable<Jugador>{
 
     private ClientThread _clientThread;
     private final List<Carta> _cartas;
     private boolean _quieroEmpezar = false;
     
+    private String _idPartidaActual;
     private int _bazasGanadas = 0;
     
     private Carta _cartaJugada = null;
@@ -132,11 +133,22 @@ public class Jugador {
     }
 
     public void replaceClientThread(final ClientThread newClientThread) {
+        _clientThread.setConnected(false);
         _clientThread = newClientThread;
+        _clientThread.setConnected(true);
     }
 
     public ClientThread getClientThread() {
         return _clientThread;
+    }
+    
+    @Override
+    public int compareTo(final Jugador other) {
+        return this.getUserToken().compareTo(other.getUserToken());
+    }
+
+    public void setIdPartidoActual(final String idPartidaActual) {
+        _idPartidaActual = idPartidaActual;
     }
     
 }

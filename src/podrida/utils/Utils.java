@@ -29,6 +29,10 @@ public class Utils {
         jo.addProperty("content", content);
         return jo;
     }
+
+    public static JsonObject createJsonReply(final boolean status, final Instruccion instruccion, final JsonElement content) {
+        return createJsonReply(status,instruccion,content.toString());
+    }
     
     public static JsonObject copyJsonReply(final JsonObject jsonObject) {
         final JsonObject jo = new JsonObject();
@@ -36,10 +40,6 @@ public class Utils {
         jo.add("code", jsonObject.get("code"));
         jo.add("content", jsonObject.get("content"));
         return jo;
-    }
-
-    public static JsonObject createJsonReply(final boolean status, final Instruccion instruccion, final JsonElement content) {
-        return createJsonReply(status,instruccion,content.toString());
     }
 
     public static int parsearNumero(final String valor) {

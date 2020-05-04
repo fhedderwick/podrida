@@ -1,9 +1,14 @@
 package podrida.model.puntajes;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import podrida.model.Jugador;
 
 public class Tabla {
@@ -81,14 +86,6 @@ public class Tabla {
         }
         _rowActual++;
         
-//        {
-//            "jugador1":{
-//                "total": 12,
-//                "puntero": false,
-//                "ultimo": false,
-//            }
-//        }
-        
         return reply;
     }
 
@@ -110,6 +107,40 @@ public class Tabla {
             reply.add(ja);
         }
         return reply;
+    }
+    
+    public JsonObject getResultadosParaGuardar(){
+        final JsonObject jo = new JsonObject();
+        if(_rowActual < 2){
+            return null;
+        }
+        final Set<Integer> set = new HashSet<>();
+        final Row header = _rows.get(0); //nombres
+        final List<Casilla> casillasHeader = header.getCasillas();
+        for(int i=1; i<casillasHeader.size(); i++){
+            final String nombre = casillasHeader.get(i).getNombre();
+            final JsonObject jugadorJo = new JsonObject();
+            final JsonArray historia = new JsonArray();
+            int puntuacionFinal = 0;
+            for(int j=1; j<_rows.size();j++){
+                final Casilla casilla = _rows.get(j).getCasillas().get(i);
+                historia.add(casilla.getPedido());
+                historia.add(casilla.getBazas());
+                puntuacionFinal = casilla.getAcumulado();
+            }
+            jugadorJo.addProperty("puntaje",puntuacionFinal);
+            set.add(puntuacionFinal);
+            jugadorJo.add("historia",historia);
+            jo.add(nombre,jugadorJo);
+        }
+        final List lista = new ArrayList<>(set);
+        Collections.sort(lista,Collections.reverseOrder());
+        for(final Map.Entry<String, JsonElement> entry : jo.entrySet()){
+            final JsonObject obj = entry.getValue().getAsJsonObject();
+            final int puntajeFinal = obj.get("puntaje").getAsInt();
+            obj.addProperty("puesto",lista.indexOf(puntajeFinal) + 1);
+        }
+        return jo;
     }
     
 }

@@ -12,10 +12,13 @@ public enum Instruccion {
     REPARTIR(6),
     MENSAJE_ESTANDAR(7),
     VER_ESTADISTICAS(8),
+    VER_ESTADISTICAS_USUARIO(9),
     CONFIGURAR_JUEGO(10),
     REGISTRAR_ESPECTADOR(11),
     ENVIAR_MENSAJE(80),
     INFORMAR_CAMBIO_CONEXION(90),
+    EXPULSAR_JUGADOR(91),
+    HEARTBEAT(95),
     INSTRUCCION_DESCONOCIDA(99);
 
     public static Instruccion getInstruccion(final String param) {
@@ -31,10 +34,13 @@ public enum Instruccion {
                 case 6: return REPARTIR;
                 case 7: return MENSAJE_ESTANDAR;
                 case 8: return VER_ESTADISTICAS;
+                case 9: return VER_ESTADISTICAS_USUARIO;
                 case 10: return CONFIGURAR_JUEGO;
                 case 11: return REGISTRAR_ESPECTADOR;
                 case 80: return ENVIAR_MENSAJE;
                 case 90: return INFORMAR_CAMBIO_CONEXION;
+                case 91: return EXPULSAR_JUGADOR;
+                case 95: return HEARTBEAT;
                 default:
             }
         }catch(final Exception e){

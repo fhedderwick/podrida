@@ -7,6 +7,7 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.InputStream;
 import podrida.managers.UserManager;
 import podrida.model.Instruccion;
+import static podrida.utils.Constants.BLOCKED_STRING;
 import podrida.utils.Utils;
 
 public class LoginHandler extends AbstractHandler {
@@ -42,12 +43,15 @@ public class LoginHandler extends AbstractHandler {
                 final String pass = requestBodyAsJsonObject.get("pass").getAsString();
                 final String token = _userManager.login(username,pass);
                 if(token != null){
-                    response = Utils.createJsonReply(true,Instruccion.INSTRUCCION_DESCONOCIDA,token);
-                    responseAsString = response.toString();
+                    if(BLOCKED_STRING.equals(token)){
+                        response = Utils.createJsonReply(false,Instruccion.INSTRUCCION_DESCONOCIDA,"El usuario esta bloqueado");
+                    } else {
+                        response = Utils.createJsonReply(true,Instruccion.INSTRUCCION_DESCONOCIDA,token);
+                    }
                 } else {
                     response = Utils.createJsonReply(false,Instruccion.INSTRUCCION_DESCONOCIDA,"Usuario o clave invalidos");
-                    responseAsString = response.toString();
                 }
+                responseAsString = response.toString();
             } catch(final Exception e) {
                 e.printStackTrace();
                 return Utils.createJsonReply(false,Instruccion.INSTRUCCION_DESCONOCIDA,"Error en la solicitud").toString();

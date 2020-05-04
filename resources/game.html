@@ -31,6 +31,7 @@
             }
         </script>
         <script type="text/javascript">
+            var heartbeatStatus = true;
             var userId;
             var username;
             var orden;
@@ -76,7 +77,10 @@
                         mensaje(content);
                         break;
                     case 8:
-                        verEstadisticasReply(status, content);
+                        processVerEstadisticasReply(status, content);
+                        break;
+                    case 9:
+                        processVerEstadisticasUsuarioReply(status, content);
                         break;
                     case 10:
                         processGameConfigReply(status, content);
@@ -90,6 +94,12 @@
                     case 90:
                         processConnectionChange(status, content);
                         break;
+                    case 91:
+                        processKickReply(status, content);
+                        break;
+                    case 95:
+                        processHeartbeatReply(status, content);
+                        break;
                     default:
                         mensaje(content);
                 }
@@ -99,9 +109,10 @@
             function processJoinGameReply(status, content) {
                 if (status) {
                     var reply = JSON.parse(content);
-                    if (reply.hasOwnProperty('userName')) {
+                    setTimeout(heartbeat,7500);
+                    if (reply.hasOwnProperty('username')) {
 //                        userId = reply.userId;
-                        username = reply.userName;
+                        username = reply.username;
                         mensaje("Conectado, esperando otros jugadores.");
                         $("#loginContainer").remove();
                         $("#pregameContainer").show();
@@ -114,7 +125,7 @@
                     socket.close();
                     mensaje(content);
                     //                alert(content);
-                    $("#guestButton").prop('disabled', false);
+                    $("#loginButton").prop('disabled', false);
                 }
             }
             ;
@@ -148,6 +159,7 @@
             ;
             function processEspectadorReply(status, content) {
                 if (status) {
+                    setTimeout(heartbeat,7500);
                     recargarDatosJuego(content);
                 } else {
                     mensaje(content);
@@ -227,8 +239,6 @@
                     cardPlayed(reply.jugador, reply.cartaJugada, false);
                     setTurn(reply.turnoActual);
                     if (reply.hasOwnProperty('ganadorBaza')) {
-                        tirable = false;
-                        setTimeout(clearPlayedCards, 2000);
                         if (reply.hasOwnProperty('puntajes')) {
                             if (reply.hasOwnProperty('end')) { //ultima baza de la ultima ronda terminada
                                 addBaza(reply.ganadorBaza, reply.bazasActuales);
@@ -244,8 +254,8 @@
                                 repartidor = reply.turnoActual;
                                 if (reply.turnoActual == orden) {
                                     mensaje("Te toca repartir");
+                                    setTimeout(solicitarRepartirClick, 2000);
                                 }
-                                setTimeout(solicitarRepartirClick, 2000);
                             }
                         } else { //baza normal terminada
                             addBaza(reply.ganadorBaza, reply.bazasActuales);
@@ -255,6 +265,7 @@
                                 playSound();
                                 mensaje("Te toca tirar");
                             }
+                            setTimeout(clearPlayedCards,2000);
                         }
                     } else { //proxima jugada de esta baza
                         if (reply.turnoActual == orden) {
@@ -336,7 +347,6 @@
                     var reply = JSON.parse(content);
                     setTurn(reply.turnoActual);
                     pedidas = 0;
-                    tirable = false;
                     clearPlayedCards();
                     if (reply.hasOwnProperty('rondaIndia')) {
                         createIndianCardSpace(reply.cartasJugadores);
@@ -374,24 +384,27 @@
             ;
             function processConnectionChange(status, content) {
                 if (status) {
-                    var element = document.getElementById("square_" + content.nombre);
-                    if (content.conexion) {
-//                        alert(content.nombre + ' se reconecto');
-                        element.classList.remove("crossed");
-                    } else {
-//                        alert(content.nombre + ' ha perdido conexion');
-                        element.classList.add("crossed");
+                    var datos = JSON.parse(content);
+                    var element = document.getElementById("square_" + datos.nombre);
+                    if(element !== undefined && element !== null){
+                        if (datos.conexion) {
+                            mensaje(datos.nombre + ' se reconecto');
+                            element.classList.remove("crossed");
+                        } else {
+                            mensaje(datos.nombre + ' ha perdido conexion');
+                            element.classList.add("crossed");
+                        }
                     }
                 } else {
                     mensaje(content);
                 }
             }
             ;
-            function recargarDatosJuego(data) {
-                var datos = JSON.parse(data);
+            function recargarDatosJuego(datos) {
+//                var datos = JSON.parse(data);
                 if (!recursosDescargados) {
                     mensajeAppend(".");
-                    setTimeout(recargarDatosJuego, 50, data);
+                    setTimeout(recargarDatosJuego, 100, data);
                     return;
                 }
                 $("#loginContainer").remove();
@@ -420,18 +433,13 @@
                 }
                 createCardSpace(datos.cartas);
                 if (datos.turno == orden) {
-                    solicitarRepartirClick();
+                    setTimeout(solicitarRepartirClick, 2000);
                 }
-                if (username === undefined) {
-                    console.log("deshabilitar todos los botones");
-//                    createCardSpace(["unknown"]);
-                }
+//                if (username === undefined) {
+//                    console.log("deshabilitar todos los botones");
+//                }
                 setTurn(datos.turno);
                 $("#gameContainer").show();
-            }
-            ;
-            function recargarDatosPropios(datos) {
-
             }
             ;
             function mensaje(msg) {
@@ -455,14 +463,16 @@
                     socket.send(mens);
                 } else {
                     mensaje("No se encontro conexion");
+                    return false;
                 }
+                return true;
             }
             ;
 
             function startGame(param) {
                 if (!recursosDescargados) {
                     mensajeAppend(".");
-                    setTimeout(startGame, 50, param);
+                    setTimeout(startGame, 100, param);
                     return;
                 }
                 vaciarMensaje();
@@ -482,7 +492,7 @@
                 repartidor = 0;
                 if (orden == 0) {
                     mensaje("Te toca repartir");
-                    solicitarRepartirClick();
+                    setTimeout(solicitarRepartirClick, 2000);
                 }
             }
             ;
@@ -507,7 +517,6 @@
                     element.innerHTML = getImagenCarta("blank");
                     element.classList.add("padded");
                 }
-                permitirTirar();
             }
             ;
             function getImagenCarta(carta) {
@@ -541,11 +550,11 @@
                     element.classList.add("padded");
                 } else {
                     element.classList.remove("padded");
-                    if (transparent) {
-                        element.classList.add("transparent");
-                    } else {
-                        element.classList.remove("transparent");
-                    }
+//                    if (transparent) {
+//                        element.classList.add("transparent");
+//                    } else {
+//                        element.classList.remove("transparent");
+//                    }
                 }
                 var elem = document.getElementById("card_" + carta);
                 //quito la carta del cardspace      
@@ -677,6 +686,7 @@
                 appendable += "<button onclick='mensajeEstandar(5)'>LA QUIERE</button>";
                 appendable += "<button onclick='verTabla()'>TABLA</button>";
                 appendable += "<button onclick='sendChatClick()'>CHAT</button>";
+                appendable += "<button disabled onclick='reset()'>REINICIAR</button>";
                 appendable += "<input onclick='toggleSound()' type='checkbox'";
                 if (sndEnabled) {
                     appendable += " checked ";
@@ -697,20 +707,10 @@
             }
             ;
 
-            var tirable = true;
-            function permitirTirar() {
-                tirable = true;
-            }
-            ;
             function solicitarTirarClick(carta) {
                 if(username === undefined){
                     return;
                 }
-                if (!tirable) {
-                    return;
-                }
-                tirable = false;
-                setTimeout(permitirTirar, 2000);
                 vaciarMensaje();
                 mensaje("Enviando " + carta);
                 var data = {id: userId, com: "4", param: carta};
@@ -782,7 +782,6 @@
                 }
             }
             ;
-
             function openSocket(token) {
                 try {
                     //        let
@@ -793,7 +792,7 @@
                 }
                 socket.onopen = function (e) { //esto se dispara ni bien se abre el socket
                     vaciarMensaje();
-                    if (token === "") {
+                    if (token === "") { //espectador
                         var data = {id: token, com: "11", param: ""};
                     } else {
                         var data = {id: token, com: "0", param: ""};
@@ -809,7 +808,7 @@
                     } else {
 //                        mensaje("Se cerro inesperadamente la conexion: codigo " + event.code);
                     }
-                    $("#guestButton").prop('disabled', false);
+                    $("#loginButton").prop('disabled', false);
                     socket = null;
                 };
                 socket.onerror = function (error) {
@@ -822,15 +821,35 @@
                 };
             }
             ;
+            function heartbeat(){
+                if(heartbeatStatus){
+                    heartbeatStatus = false;
+                    var data = {id: username, com: "95", param: ""};
+                    setTimeout(heartbeat,7500);
+                    socketSend(data);
+                } else {
+                    if(username !== undefined){
+                        var elem = document.getElementById("square_" + username);
+                        if(elem !== undefined && elem !== null){
+                            elem.classList.add("crossed");
+                        }
+                    }
+                    alert("Se ha perdido la conexion. Refresque el navegador e ingrese nuevamente.");
+//                    openSocket(username);
+                }
+            };
+            function processHeartbeatReply(){
+              heartbeatStatus = true;
+            };
             function leaderboardButtonClick() {
                 vaciarMensaje();
                 var data = {id: userId, com: "8", param: ""};
                 socketSend(data);
             }
             ;
-            function verEstadisticasReply(status, content) {
+            function processVerEstadisticasReply(status, content) {
                 if (status) {
-                    alert(content);
+                    console.log(content);
                 } else {
                     mensaje(content);
                 }
@@ -842,7 +861,7 @@
                         openSocket("");
                     } else {
                         mensajeAppend(".");
-                        setTimeout(spectatorButtonClick, 5, token);
+                        setTimeout(spectatorButtonClick, 100, token);
                     }
                 } else {
                     descargarRecursos();
@@ -850,19 +869,50 @@
                 }
             }
             ;
-            function guestButtonClick() {
-                $.post('http://' + window.location.host + '/podrida?guest=' + $("#guestNameInput").val()).done(function (data) {
-                    var reply = JSON.parse(data);
-                    if (reply.status) {
-                        enterGame(reply.content);
-                    } else {
-                        mensaje(reply.content);
-                        $("#guestButton").prop('disabled', false);
-                    }
-                }).fail(function () {
-                    $("#guestButton").prop('disabled', false);
-                    mensaje("Error de conexion");
-                });
+            function kick(nombre){
+                if(username === undefined){
+                    return;
+                }
+                if(document.getElementById("square_" + nombre).classList.contains("crossed")){
+                    vaciarMensaje();
+                    var data = {id: userId, com: "91", param: nombre};
+                    socketSend(data);
+                } else {
+                    mensaje("No se puede echar a un jugador con conexion activa!");
+                }
+            };
+            function processKickReply(status, content) {
+                if (status) {
+                    alert("Se echara al jugador");
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
+            function reset(){
+                if(username === undefined){
+                    return;
+                }
+                if (confirm("Reiniciar juego?")) {
+                    alert("Aun no implementado");
+//                  enviar post de RESET, solo ocurrira si todos los jugadores activos aprietan alli en un lapso adecuado
+                }
+            };
+            function verEstadisticasUsuario(nombre){
+                vaciarMensaje();
+                var data = {id: userId, com: "9", param: nombre};
+                socketSend(data);
+            };
+            function processVerEstadisticasUsuarioReply(status, content) {
+                if (status) {
+                    closeTable();
+                    var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    htmlContent += content;
+                    htmlContent += "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    $("#tableContainer").empty().append(htmlContent);
+                } else {
+                    mensaje(content);
+                }
             }
             ;
             function descargarRecursos() {
@@ -897,7 +947,7 @@
                         openSocket(token);
                     } else {
                         mensajeAppend(".");
-                        setTimeout(enterGame, 5, token);
+                        setTimeout(enterGame, 100, token);
                     }
                 } else {
                     descargarRecursos();
@@ -1052,16 +1102,10 @@
                     <button id="unregisterButton" onclick="unregisterClick()">
                         Eliminar usuario
                     </button>
-                </div><br>
-                <div>O bien entrar como invitado</div>
-                <div>
-                    <input id="guestNameInput" maxlength="20"/>
-                    <button id="guestButton" onclick="guestButtonClick()">
-                        Ingresar como invitado
-                    </button>
                 </div>
                 <br>
-                <div>O como espectador</div>
+                <div>O ingresar como espectador</div>
+                <br>
                 <div>
                     <button id="spectatorButton" onclick="spectatorButtonClick()">
                         Ingresar como espectador
@@ -1075,7 +1119,7 @@
                 <button id="solicitarIniciarButton" onclick="solicitarIniciarClick()">
                     Solicitar inicio con los que estamos
                 </button>
-                <button id="leaderboardButton" onclick="leaderboardButtonClick()">
+                <button disabled id="leaderboardButton" onclick="leaderboardButtonClick()">
                     Estadisticas
                 </button>
                 <br>

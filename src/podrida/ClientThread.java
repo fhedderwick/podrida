@@ -64,7 +64,6 @@ public class ClientThread extends Thread{
             System.out.println("Client at " + _remoteAddress + " disconnected OK");
             _gameManager.desconexion(this);
         } catch (final IOException e) {
-//            line=this.getName(); //reused String line for getting thread name
             e.printStackTrace();
             System.out.println("IO Error/ Client at " + _remoteAddress + " terminated abruptly");
             _gameManager.desconexion(this);
@@ -89,7 +88,7 @@ public class ClientThread extends Thread{
     private void attendText(final String framePayload) throws IOException{
         final JsonObject jo = _gameManager.processRequest(this,framePayload);
         if(jo != null){
-            System.out.println("Enviando a " + (_user != null ? _user.getUsername() : "(desconocido)") + ": " + jo.toString());
+            System.out.println("Enviando a " + (_user != null ? _user.getUsername() : "espectador") + ": " + jo.toString());
             write(jo.toString());
         }
     }
@@ -126,10 +125,6 @@ public class ClientThread extends Thread{
         return _remoteAddress;
     }
 
-    public String getClientIp(){
-        return _clientIp;
-    }
-
     public User getUser() {
         return _user;
     }
@@ -152,6 +147,13 @@ public class ClientThread extends Thread{
 
     public void setConnected(final boolean val) {
         _connected = val;
+        if(!_connected){
+            try {
+                _in.close();
+            } catch (final IOException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
     
 }

@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import podrida.ClientThread;
 import podrida.Partida;
 import podrida.PrePartida;
@@ -13,19 +14,21 @@ import podrida.model.Carta;
 import podrida.model.Espectador;
 import podrida.utils.Utils;
 import podrida.model.Instruccion;
+import static podrida.model.Instruccion.EXPULSAR_JUGADOR;
 import podrida.model.Jugador;
 import podrida.model.User;
+import podrida.model.estadistica.EstadisticasUsuario;
 
 public class PodridaManager extends GameManager {
 
-    private final List<ClientThread> _threads;
+    private final List<ClientThread> _clientThreads;
     private final PrePartida _prePartida;
     private final UserManager _userManager;
     private final int _maxPlayers;
     private Partida _juego = null;
 
     public PodridaManager(final int maxPlayers, final UserManager userManager) {
-        _threads = new ArrayList<>();
+        _clientThreads = new ArrayList<>();
         _maxPlayers = maxPlayers;
         _userManager = userManager;
         _prePartida = new PrePartida(maxPlayers);
@@ -55,11 +58,16 @@ public class PodridaManager extends GameManager {
                 if (user == null) {
                     return Utils.createJsonReply(false, instruccion, "No se encuentra el usuario");
                 }
+                //el usuario logueado es asociado a este nuevo thread
                 invoker.associateUser(user);
                 if (hasStarted()) {
-                    final Jugador jugador = _juego.getJugadorByUser(user);
-                    if (jugador == null) {
+                    final Jugador jugador;
+                    jugador = _juego.getJugadorByUsername(user.getUsername());
+                    if(jugador == null){
+                        System.out.println("No se encontro jugador (REGISTRADO) en esta partida que tuviera ese username");System.out.flush();
                         return Utils.createJsonReply(false, instruccion, "No se puede, el juego ya esta iniciado");
+                    } else {
+                        System.out.println("Se encontro jugador (REGISTRADO) en esta partida con ese username!");System.out.flush();
                     }
                     final JsonObject reconnectionData = reconexion(jugador, invoker);
                     if (reconnectionData != null) {
@@ -75,12 +83,11 @@ public class PodridaManager extends GameManager {
                     if (nuevoJugador == null) {
                         return Utils.createJsonReply(false, instruccion, "No se puede agregar, ya se alcanzo el maximo de jugadores (." + _maxPlayers + ").");
                     }
-                    jo.addProperty("userName", nuevoJugador.getUsername());
+                    jo.addProperty("username", nuevoJugador.getUsername());
                 } else {
                     System.out.println("REEMPLAZANDO THREAD");
-                    jugador.getClientThread().setConnected(false);
                     _prePartida.reemplazarThread(jugador, invoker);
-                    jo.addProperty("userName", jugador.getUsername());
+                    jo.addProperty("username", jugador.getUsername());
                 }
                 invoker.setConnected(true);
                 enviarEstadoPrejuego();
@@ -136,6 +143,18 @@ public class PodridaManager extends GameManager {
                     return reply;
                 }
                 WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
+                if(_juego.hasEnded()){
+                    final Map results = _juego.getResults();
+                    if(!results.isEmpty()){
+                        if(!_userManager.writeStats(results)){
+                            System.out.println("Se guardo la estadistica de esta partida");
+                        } else {
+                            System.out.println("Error al guardar la estadistica de esta partida");
+                        }
+                    } else {
+                        System.out.println("No se encontraron datos para persistir");
+                    }
+                }
                 return null;
             case ELEGIR_NUMERO:
                 if (!hasStarted()) {
@@ -177,11 +196,20 @@ public class PodridaManager extends GameManager {
                 WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
                 return null;
             case VER_ESTADISTICAS:
-                reply = Utils.createJsonReply(true, instruccion, "contenido de las estadisticas");
+                reply = Utils.createJsonReply(true, instruccion, "contenido del leaderboard");
                 if (!reply.get("status").getAsBoolean()) {
                     return Utils.createJsonReply(false, instruccion, "Error al obtener las estadisticas");
                 }
                 return reply;
+            case VER_ESTADISTICAS_USUARIO:
+                if (!hasStarted()) {
+                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+                }
+                final EstadisticasUsuario estadisticasUsuario = _userManager.getEstadisticasUsuario(parametro);
+                if(estadisticasUsuario == null){
+                    return Utils.createJsonReply(false, instruccion, "El jugador solicitado no esta registrado o no esta jugando este partido");
+                }
+                return Utils.createJsonReply(true, instruccion, estadisticasUsuario.getAsHtmlTable());
             case ENVIAR_MENSAJE:
                 if (!hasStarted()) {
                     return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
@@ -206,7 +234,22 @@ public class PodridaManager extends GameManager {
                 if (gameData != null) {
                     return Utils.createJsonReply(true, instruccion, gameData);
                 }
-                return Utils.createJsonReply(false, instruccion, "No se pudo reconectar");
+                return Utils.createJsonReply(false, instruccion, "No se pudo entrar");
+            case HEARTBEAT:
+                if(invoker.isConnected()){
+                    return Utils.createJsonReply(true, instruccion, "");
+                }
+                return null;
+            case EXPULSAR_JUGADOR:
+//                getJugadorByNombre();
+//                if(jugador == null){
+//                    return Utils.createJsonReply(false, instruccion, "No se puede echar a un jugador con conexion activa!");
+//                }
+//                A ese jugador se le considera que pidio 0 bazas, que sus cartas son todos peores que un 4, y no tiene turno
+//                Se considera que suma siempre 0 puntos, y se le considera abandonador
+//                Broadcast 91
+//                return null;
+                return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
             case INSTRUCCION_DESCONOCIDA:
             default:
         };
@@ -260,22 +303,12 @@ public class PodridaManager extends GameManager {
     }
 
     private JsonObject reconexion(final Jugador jugador, final ClientThread clientThread) {
-        clientThread.setConnected(true);
         _juego.reemplazarThread(jugador, clientThread);
         final JsonObject data = new JsonObject();
         data.addProperty("conexion", true);
         data.addProperty("nombre", jugador.getUsername());
         final JsonObject mensaje = Utils.createJsonReply(true, Instruccion.INFORMAR_CAMBIO_CONEXION, data);
-        final List<ClientThread> clientThreads = new ArrayList<>();
-        for (final Jugador jugadorActivo : _juego.getJugadores()) {
-            final ClientThread thread = jugadorActivo.getClientThread();
-//                    if(thread.isConnected()){
-            System.out.println("Verificar que pasa si se lo quiere enviar a un thread caido");
-            System.out.flush();
-            clientThreads.add(thread);
-//                    }
-        }
-        WebSocket.broadcast(clientThreads, mensaje);
+        WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), mensaje);
         final JsonObject reply = new JsonObject();
         reply.add("datos", crearDatosDeJuego(jugador));
         return reply;
@@ -330,8 +363,15 @@ public class PodridaManager extends GameManager {
 
     @Override
     public void registerThread(final ClientThread clientThread) {
-        _threads.add(clientThread); //para que?
+        _clientThreads.add(clientThread);
         clientThread.start();
+    }
+
+    public void disconectAll() {
+        for(final ClientThread ct : _clientThreads){
+            ct.setConnected(false);
+        }
+        _clientThreads.clear();
     }
 
 }

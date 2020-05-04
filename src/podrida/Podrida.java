@@ -35,24 +35,31 @@ public class Podrida {
             System.out.println("No se encontro el archivo de mensajes");
             return;
         }
-        final UserManager userManager = new UserManager("resources/users");
-        final PodridaManager gameManager = new PodridaManager(maxConnections, userManager);
+        
         final HttpServer server = HttpServer.create(new InetSocketAddress(port), maxConnections);
         server.createContext("/", new DefaultHandler());
+        server.createContext("/numeros", new NumerosHandler());
+server.start();
+        if(loadPodrida(server)){
+            loadPodrida(server);
+        }
+    }
+    
+    private static boolean loadPodrida(final HttpServer server) throws Exception{
+        final UserManager userManager = new UserManager("resources/users");
+        final PodridaManager gameManager = new PodridaManager(maxConnections, userManager);
+        final ServerSocket podridaSocket = new ServerSocket(wsPort, maxConnections);
         server.createContext("/login", new LoginHandler(userManager));
         server.createContext("/register", new RegisterHandler(userManager));
         server.createContext("/unregister", new UnregisterHandler(userManager));
-        server.createContext("/numeros", new NumerosHandler());
-        server.createContext("/podrida", new PodridaHandler(wsPort,maxConnections,userManager));
-        server.setExecutor(null); // creates a default executor
-        server.start();
+        server.createContext("/podrida", new PodridaHandler(wsPort,podridaSocket));
+//        server.setExecutor(null); // creates a default executor
+        
         
         //creo que si se bajan todos se rompe
-        
-        final ServerSocket podridaSocket = new ServerSocket(wsPort, maxConnections);
         try {
-            boolean running = true;
             System.out.println("Server has started on 127.0.0.1:" + wsPort + ".\r\nWaiting for a connection...");
+            boolean running = true;
             while (running) {
                 try {
                     final Socket client = podridaSocket.accept();
@@ -60,11 +67,20 @@ public class Podrida {
                 } catch (final Exception e) {
                     System.out.println("I/O error: ");
                     e.printStackTrace();
+                    if(podridaSocket.isClosed()){
+                        gameManager.disconectAll();
+                        return true;
+                    }
                 }
             }
         } finally {
             podridaSocket.close();
+            server.removeContext("/login");
+            server.removeContext("/register");
+            server.removeContext("/unregister");
+            server.removeContext("/podrida");
         }
+        return true;
     }
         
 }

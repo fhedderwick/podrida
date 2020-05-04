@@ -23,6 +23,14 @@ public class Casilla{
         _ultima = false;
     }
 
+    public int getPedido(){
+        return _pedido;
+    }
+    
+    public int getBazas(){
+        return _bazas;
+    }
+    
     public void setPedido(final int pedido) {
         this._pedido = pedido;
     }

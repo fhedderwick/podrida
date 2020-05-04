@@ -1,22 +1,30 @@
 package podrida;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import podrida.model.puntajes.Tabla;
 import podrida.model.Jugador;
 import podrida.model.Mazo;
 import podrida.model.Carta;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import podrida.model.Baza;
 import podrida.model.Espectador;
 import podrida.model.Instruccion;
-import podrida.model.User;
+import podrida.model.estadistica.EstadisticaJugadorPartido;
 import podrida.utils.MensajesEstandar;
 import podrida.utils.Utils;
 
 public class Partida {
 
+    private final String _idPartida;
     private final List<Jugador> _jugadores;
+    private final Map<String,EstadisticaJugadorPartido> _estadisticasPartido;
     private final List<Espectador> _espectadores;
     private final Configuracion _configuracion;
     private final Mazo _mazo;
@@ -24,6 +32,7 @@ public class Partida {
     private boolean _momentoElegir;
     private boolean _momentoTirar;
     private boolean _momentoRepartir;
+    private boolean _ended;
     private int _jugadorTurno;
     private int _jugadorManoInicial;
     private int _cartasJugadas = 0;
@@ -32,9 +41,12 @@ public class Partida {
     private int _bazasQueDebenJugarseEstaRonda = 2;
     private int _bazasDeLaRondaMaxima;
     private int _sumaElegidos = 0;
+    private Long _time = System.currentTimeMillis();
 
-    public Partida(final List<Jugador> jugadores, final Configuracion configuracion) {
-        _jugadores = jugadores;
+    public Partida(final List<Jugador> candidatos, final Configuracion configuracion) {
+        _idPartida = UUID.randomUUID().toString();
+        _jugadores = loadJugadores(candidatos,_idPartida);
+        _estadisticasPartido = new HashMap<>();
         _espectadores = new ArrayList<>();
         _configuracion = configuracion;
         _jugadorTurno = 0;
@@ -50,7 +62,7 @@ public class Partida {
         _momentoRepartir = true;
         _momentoTirar = false;
         _momentoElegir = false;
-        
+        _ended = false;
     }
 
     public JsonObject repartir(final String idJugadorRepartidor) {
@@ -95,66 +107,72 @@ public class Partida {
         }
         if (esElTurno(jugadorTirador)) {
             if (_momentoTirar) {
-                final JsonObject reply = new JsonObject();
-                final Carta carta;
-                if(!"unknown".equals(parametro)){
-                    carta = jugadorTirador.getCarta(parametro);
-                } else {
-                    carta = jugadorTirador.getCartaIndia();
-                }
-                if(carta == null){
-                    return Utils.createJsonReply(false,Instruccion.TIRAR_CARTA,"No tenes esa carta");
-                }
-                jugadorTirador.setCartaJugada(carta);
-                _cartasJugadas++;
-                final int jugadorTiradorIndex = _jugadorTurno;
-                pasarTurno();
-                if (_cartasJugadas == _jugadores.size()) {
-                    _cartasJugadas = 0;
-                    //en este momento el turno lo tiene el que tiro primero en esta baza
-                    int ganadorBaza = calcularGanadorBaza();
-                    _jugadores.get(ganadorBaza).sumarBaza();
-                    _jugadorTurno = ganadorBaza;
-                    _bazasJugadas++;
-                    if (_bazasJugadas == _bazasQueDebenJugarseEstaRonda) {
-                        final JsonObject puntajesRonda = _tabla.calcularPuntajesRonda(_jugadores);
-                        if (_bazasQueDebenJugarseEstaRonda == 1) {
+                if(waitTimeFinished()) {
+                    final JsonObject reply = new JsonObject();
+                    final Carta carta;
+                    if(!"unknown".equals(parametro)){
+                        carta = jugadorTirador.getCarta(parametro);
+                    } else {
+                        carta = jugadorTirador.getCartaIndia();
+                    }
+                    if(carta == null){
+                        return Utils.createJsonReply(false,Instruccion.TIRAR_CARTA,"No tenes esa carta");
+                    }
+                    jugadorTirador.setCartaJugada(carta);
+                    _cartasJugadas++;
+                    final int jugadorTiradorIndex = _jugadorTurno;
+                    pasarTurno();
+                    if (_cartasJugadas == _jugadores.size()) {
+                        _cartasJugadas = 0;
+                        //en este momento el turno lo tiene el que tiro primero en esta baza
+                        int ganadorBaza = calcularGanadorBaza();
+                        _jugadores.get(ganadorBaza).sumarBaza();
+                        _jugadorTurno = ganadorBaza;
+                        _bazasJugadas++;
+                        if (_bazasJugadas == _bazasQueDebenJugarseEstaRonda) {
+                            final JsonObject puntajesRonda = _tabla.calcularPuntajesRonda(_jugadores);
+                            if (_bazasQueDebenJugarseEstaRonda == 1) {
+                                reply.addProperty("ganadorBaza", ganadorBaza);
+                                reply.addProperty("bazasActuales", _jugadores.get(ganadorBaza).getBazasGanadas());
+                                reply.addProperty("jugador", jugadorTiradorIndex);
+                                reply.addProperty("cartaJugada", carta.getId());
+                                reply.add("puntajes", puntajesRonda);
+                                reply.addProperty("end", true);
+                                reply.addProperty("turnoActual", -1);
+                                _momentoRepartir = false;
+                                _momentoTirar = false;
+                                _momentoElegir = false;
+                                _ended = true;
+                                return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
+                            }
+                            _momentoRepartir = true;
+                            _momentoTirar = false;
+                            _jugadorTurno = _jugadorManoInicial; //turno del que reparte
                             reply.addProperty("ganadorBaza", ganadorBaza);
                             reply.addProperty("bazasActuales", _jugadores.get(ganadorBaza).getBazasGanadas());
                             reply.addProperty("jugador", jugadorTiradorIndex);
                             reply.addProperty("cartaJugada", carta.getId());
                             reply.add("puntajes", puntajesRonda);
-                            reply.addProperty("end", true);
-                            reply.addProperty("turnoActual", -1);
-                            _momentoRepartir = false;
-                            _momentoTirar = false;
-                            _momentoElegir = false;
+                            reply.addProperty("turnoActual", _jugadorTurno);
+                            startWaitTime();
                             return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
                         }
-                        _momentoRepartir = true;
-                        _momentoTirar = false;
-                        _jugadorTurno = _jugadorManoInicial; //turno del que reparte
+                        //baza terminada, mostrar quien se la llevo
                         reply.addProperty("ganadorBaza", ganadorBaza);
                         reply.addProperty("bazasActuales", _jugadores.get(ganadorBaza).getBazasGanadas());
                         reply.addProperty("jugador", jugadorTiradorIndex);
                         reply.addProperty("cartaJugada", carta.getId());
-                        reply.add("puntajes", puntajesRonda);
                         reply.addProperty("turnoActual", _jugadorTurno);
+                        startWaitTime();
                         return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
                     }
-                    //baza terminada, mostrar quien se la llevo
-                    reply.addProperty("ganadorBaza", ganadorBaza);
-                    reply.addProperty("bazasActuales", _jugadores.get(ganadorBaza).getBazasGanadas());
+                    //carta jugada, pasar turno al siguiente
                     reply.addProperty("jugador", jugadorTiradorIndex);
                     reply.addProperty("cartaJugada", carta.getId());
                     reply.addProperty("turnoActual", _jugadorTurno);
                     return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
                 }
-                //carta jugada, pasar turno al siguiente
-                reply.addProperty("jugador", jugadorTiradorIndex);
-                reply.addProperty("cartaJugada", carta.getId());
-                reply.addProperty("turnoActual", _jugadorTurno);
-                return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
+                return Utils.createJsonReply(false,Instruccion.TIRAR_CARTA,"Esperar a que se limpien las cartas de la ronda anterior");
             }
             return Utils.createJsonReply(false,Instruccion.TIRAR_CARTA,"No es momento de tirar");
         }
@@ -324,9 +342,9 @@ public class Partida {
         return _mazo.getCantMaximaCartas();
     }
 
-    public Jugador getJugadorByUser(final User user) {
+    public Jugador getJugadorByUsername(final String username) {
         for(final Jugador jugador : _jugadores){
-            if(jugador.getUsername().equals(user.getUsername())){
+            if(jugador.getUsername().equals(username)){
                 return jugador;
             }
         }
@@ -387,4 +405,54 @@ public class Partida {
         return _espectadores;
     }
 
+    private List<Jugador> loadJugadores(final List<Jugador> candidatos, final String _idPartida) {
+        final List<Jugador> jugadores = new ArrayList<>();
+        for(final Jugador candidato : candidatos){
+            jugadores.add(candidato);
+            candidato.setIdPartidoActual(_idPartida);
+        }
+        Collections.sort(jugadores);
+        return jugadores;
+    }
+
+    public boolean hasEnded() {
+        return _ended;
+    }
+
+    public final Map<String,EstadisticaJugadorPartido> getResults() {
+        final Map<String,EstadisticaJugadorPartido> results = new HashMap<>();
+        final JsonObject puntajes = _tabla.getResultadosParaGuardar();
+        if(puntajes == null){
+            return results;
+        }
+        for(final Map.Entry<String, JsonElement> entry : puntajes.entrySet()){
+//            results.put(jugador.getUsername(),calculateValues(jugador));
+            System.out.println(entry.toString());
+            final JsonObject jo = entry.getValue().getAsJsonObject();
+            final int puntaje = jo.get("puntaje").getAsInt();
+            final int puesto = jo.get("puesto").getAsInt();
+            final List<Baza> bazas = crearListaBazas(jo.get("historia").getAsJsonArray());
+            final EstadisticaJugadorPartido ejp = new EstadisticaJugadorPartido
+            (_idPartida,_jugadores.size(),_configuracion.getCantBarajas(),_bazasJugadas,puntaje,puesto,bazas);
+            results.put(entry.getKey(), ejp);
+        }
+        return results;
+    }
+    
+    private List<Baza> crearListaBazas(final JsonArray historia){
+        final List<Baza> lista = new ArrayList<>();
+        for(int i=0; i<historia.size(); i+=2){
+            lista.add(new Baza(historia.get(i).getAsInt(),historia.get(i+1).getAsInt()));
+        }
+        return lista;
+    }
+    
+    private void startWaitTime(){
+        _time = System.currentTimeMillis();
+    }
+    
+    private boolean waitTimeFinished(){
+        return System.currentTimeMillis() - _time > 2500;
+    }
+    
 }
