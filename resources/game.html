@@ -37,6 +37,7 @@
             var orden;
             var cantCandidatos = 0;
             var jugadores = [];
+            var estadisticasPedidas = [];
             var imagenesCartas;
             var jugable = false;
             var pedidas = 0;
@@ -365,6 +366,7 @@
             ;
 
             function closeTable() {
+                estadisticasPedidas=[];
                 $("#tableContainer").empty().append("-");
             }
 
@@ -415,6 +417,7 @@
                 userId = datos.userId;
                 username = datos.username;
                 pedidas = datos.pedidas;
+                estadisticasPedidas = [];
                 sndEnabled = false;
                 jugable = true;
                 prepararTablero(datos.tablero);
@@ -901,14 +904,22 @@
             };
             function verEstadisticasUsuario(nombre){
                 vaciarMensaje();
-                var data = {id: userId, com: "9", param: nombre};
+                estadisticasPedidas.push(nombre);
+                var data = {id: userId, com: "9", param: JSON.stringify(estadisticasPedidas)};
                 socketSend(data);
             };
             function processVerEstadisticasUsuarioReply(status, content) {
                 if (status) {
-                    closeTable();
+                    var data = JSON.parse(content);
+                    if(estadisticasPedidas.length === 0){
+                        closeTable();
+                    }
                     var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
-                    htmlContent += content;
+                    htmlContent += "<table class='bordered padded'>";
+                    for(var x in data){
+                        htmlContent += data[x];
+                    }
+                    htmlContent += "</table>";
                     htmlContent += "<button onclick='closeTable()'>CERRAR TABLA</button>";
                     $("#tableContainer").empty().append(htmlContent);
                 } else {

@@ -58,7 +58,12 @@ public class Configuracion {
         sb.append("El juego esta configurado en ");
         sb.append(_cantBarajas);
         sb.append(" baraja");
-        sb.append(_cantBarajas > 1 ? "s y ":" y ");
+        if(_cantBarajas > 1){
+            sb.append("s");
+        }
+        sb.append(", con ronda maxima de ");
+        sb.append(_cantBazasMaximaForzada);
+        sb.append(" bazas y ");
         sb.append(_ultimaRondaIndia?"con ":"sin ");
         sb.append("ronda final india.");
         return sb.toString();

@@ -1,5 +1,8 @@
 package podrida.managers;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -159,16 +162,61 @@ public class UserManager {
         }
         return null;
     }
+    
+    
+    public JsonArray getEstadisticasUsuariosAsHtmlTable(final String usernames) {
+        final JsonArray ja = new JsonArray();
+        try{
+            final JsonArray usernamesAsJsonArray = JsonParser.parseString(usernames).getAsJsonArray();
+            final Set<String> usernamesAsList = new HashSet<>();
+            for(final JsonElement je : usernamesAsJsonArray){
+                usernamesAsList.add(je.getAsString());
+            }
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Jugador</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Partidos jugados</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Triunfos</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Segundo puestos</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Ultimo lugar</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Invictos</td>");
+            ja.add("<tr class='bordered padded'><td class='bordered padded'>Abandonos</td>");
+//            ja.add("<tr class='bordered padded'><td class='bordered padded'>Promedio puntuacion total</td>");
+//            ja.add("<tr class='bordered padded'><td class='bordered padded'>Promedio puntuacion maximo</td>");
+//            ja.add("<tr class='bordered padded'><td class='bordered padded'>Puntos totales</td>");
+//            ja.add("<tr class='bordered padded'><td class='bordered padded'>Ranking</td>");
+            final List<EstadisticasUsuario> estadisticasUsuarios = getEstadisticasUsuarios(usernamesAsList);
+            for(final EstadisticasUsuario estadisticasUsuario : estadisticasUsuarios){
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getUsername()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosTotales()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosPrimero()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosSegundo()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosUltimo()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosInvicto()+"</td>");
+                ja.add(ja.remove(0).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPartidosAbandonados()+"</td>");
+//                ja.add(ja.get(i++).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPromedioPuntuacion()+"</td>");
+//                ja.add(ja.get(i++).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPromedioPuntuacionMaximo()+"</td>");
+//                ja.add(ja.get(i++).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getPuntosTotales()+"</td>");
+//                ja.add(ja.get(i++).getAsString() + "<td class='bordered padded'>"+estadisticasUsuario.getRanking()+"</td>");
+            }
+            final int jaSize = ja.size();
+            for(int i=0; i<jaSize ; i++){
+                ja.add(ja.remove(0).getAsString() + "</tr>");
+            }
+        }catch(final Exception e){
+            e.printStackTrace();
+        }
+        return ja;
+    }
 
-    public EstadisticasUsuario getEstadisticasUsuario(final String username) {
-        if(username == null || "".equals(username)){
-            return null;
+    private List<EstadisticasUsuario> getEstadisticasUsuarios(final Set<String> usernames) {
+        final List<EstadisticasUsuario> lista = new ArrayList<>();
+        for(final String username : usernames){
+            final User user = getLoggedUserByUsername(username);
+            if(user == null){
+                continue;
+            }
+            lista.add(user.getEstadistica());
         }
-        final User user = getLoggedUserByUsername(username);
-        if(user == null){
-            return null;
-        }
-        return user.getEstadistica();
+        return lista;
     }
     
     private User getLoggedUserByUsername(final String username){

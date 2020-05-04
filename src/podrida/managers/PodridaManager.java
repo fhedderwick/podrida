@@ -17,7 +17,6 @@ import podrida.model.Instruccion;
 import static podrida.model.Instruccion.EXPULSAR_JUGADOR;
 import podrida.model.Jugador;
 import podrida.model.User;
-import podrida.model.estadistica.EstadisticasUsuario;
 
 public class PodridaManager extends GameManager {
 
@@ -205,11 +204,11 @@ public class PodridaManager extends GameManager {
                 if (!hasStarted()) {
                     return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
                 }
-                final EstadisticasUsuario estadisticasUsuario = _userManager.getEstadisticasUsuario(parametro);
+                final JsonArray estadisticasUsuario = _userManager.getEstadisticasUsuariosAsHtmlTable(parametro);
                 if(estadisticasUsuario == null){
                     return Utils.createJsonReply(false, instruccion, "El jugador solicitado no esta registrado o no esta jugando este partido");
                 }
-                return Utils.createJsonReply(true, instruccion, estadisticasUsuario.getAsHtmlTable());
+                return Utils.createJsonReply(true, instruccion, estadisticasUsuario);
             case ENVIAR_MENSAJE:
                 if (!hasStarted()) {
                     return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
