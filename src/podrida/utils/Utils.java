@@ -146,7 +146,7 @@ public class Utils {
     }
 
     public static int getRandomInt(final int notIncludedMax) {
-        return abs(new Random(System.currentTimeMillis()).nextInt() % notIncludedMax);
+        return abs(new Random().nextInt() % notIncludedMax);
     }
 
     public static String readInputStream(final InputStream is, final String encoding) {

@@ -4,7 +4,6 @@ import java.util.List;
 
 public class EstadisticasUsuario {
 
-    private final List<String> _lineas;
     private final String _username;
     private int _partidosTotales;
     private int _partidosPrimero;
@@ -20,7 +19,6 @@ public class EstadisticasUsuario {
     
     public EstadisticasUsuario(final String username, final List<String> lineas) {
         _username = username;
-        _lineas = lineas;
         for(final String linea : lineas){
             final EstadisticaJugadorPartido ejp = EstadisticaJugadorPartido.leerLinea(linea);
             if(ejp != null){
@@ -48,7 +46,7 @@ public class EstadisticasUsuario {
         if(ejp.getPuesto() == -1){
             _partidosAbandonados++;
         }
-        if(ejp.getCumplidas() == ejp.getCantBazasJugadas() && ejp.getFalladas() == 0){
+        if(ejp.getFalladas() == 0){
             _partidosInvicto++;
         }
     }
