@@ -18,13 +18,13 @@ import podrida.model.Espectador;
 import podrida.model.Instruccion;
 import podrida.model.estadistica.EstadisticaJugadorPartido;
 import podrida.utils.MensajesEstandar;
+import podrida.utils.Stats;
 import podrida.utils.Utils;
 
 public class Partida {
 
     private final String _idPartida;
     private final List<Jugador> _jugadores;
-    private final Map<String,EstadisticaJugadorPartido> _estadisticasPartido;
     private final List<Espectador> _espectadores;
     private final Configuracion _configuracion;
     private final Mazo _mazo;
@@ -46,7 +46,6 @@ public class Partida {
     public Partida(final List<Jugador> candidatos, final Configuracion configuracion) {
         _idPartida = UUID.randomUUID().toString();
         _jugadores = loadJugadores(candidatos,_idPartida);
-        _estadisticasPartido = new HashMap<>();
         _espectadores = new ArrayList<>();
         _configuracion = configuracion;
         _jugadorTurno = 0;
@@ -89,7 +88,9 @@ public class Partida {
                     jugador.setNumeroElegido(-1);
                 }
                 for (final Jugador jugador : _jugadores) {
-                    jugador.recibirCartas(_mazo.getCartas(_bazasQueDebenJugarseEstaRonda));
+                    final List<Carta> cartas = _mazo.getCartas(_bazasQueDebenJugarseEstaRonda);
+                    Stats.logCartasParaJugador(jugador,cartas);
+                    jugador.recibirCartas(cartas);
                 }
                 _momentoRepartir = false;
                 _momentoElegir = true;
@@ -426,14 +427,13 @@ public class Partida {
             return results;
         }
         for(final Map.Entry<String, JsonElement> entry : puntajes.entrySet()){
-//            results.put(jugador.getUsername(),calculateValues(jugador));
-            System.out.println(entry.toString());
             final JsonObject jo = entry.getValue().getAsJsonObject();
             final int puntaje = jo.get("puntaje").getAsInt();
             final int puesto = jo.get("puesto").getAsInt();
+            final int ultimoPuesto = jo.get("ultimoPuesto").getAsInt();
             final List<Baza> bazas = crearListaBazas(jo.get("historia").getAsJsonArray());
             final EstadisticaJugadorPartido ejp = new EstadisticaJugadorPartido
-            (_idPartida,_jugadores.size(),_configuracion.getCantBarajas(),_bazasJugadas,puntaje,puesto,bazas);
+            (_idPartida,_jugadores.size(),_configuracion.getCantBarajas(),ultimoPuesto,puntaje,puesto,bazas);
             results.put(entry.getKey(), ejp);
         }
         return results;
@@ -453,6 +453,10 @@ public class Partida {
     
     private boolean waitTimeFinished(){
         return System.currentTimeMillis() - _time > 2500;
+    }
+    
+    public String getIdPartida(){
+        return _idPartida;
     }
     
 }

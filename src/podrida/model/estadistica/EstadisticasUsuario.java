@@ -17,6 +17,16 @@ public class EstadisticasUsuario {
     private int _puntosTotales;
     private int _ranking;
     
+//    public static void main(final String[] args){
+//        final List<String> fileLines = Utils.readFileLines("./resources/users/0FH");
+//        if(fileLines.isEmpty()){
+//            return;
+//        }
+//        final String savedPass = fileLines.remove(0);
+//        final EstadisticasUsuario estadisticasUsuario = new EstadisticasUsuario("FH", fileLines);
+//        System.out.println("data");
+//    }
+    
     public EstadisticasUsuario(final String username, final List<String> lineas) {
         _username = username;
         for(final String linea : lineas){
@@ -40,7 +50,7 @@ public class EstadisticasUsuario {
         if(ejp.getPuesto() == 2){
             _partidosSegundo++;
         }
-        if(ejp.getPuesto() == ejp.getCantJugadores()){
+        if(ejp.getPuesto() == ejp.getUltimoPuesto() && ejp.getUltimoPuesto() > 2){
             _partidosUltimo++;
         }
         if(ejp.getPuesto() == -1){

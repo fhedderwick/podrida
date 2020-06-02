@@ -17,11 +17,14 @@ import podrida.utils.MensajesEstandar;
 
 public class Podrida {
 
+    private static final int VERSION = 6;
+    
     private static int port = 8000;
     private static int wsPort = 8001;
     private static int maxConnections = 10;
     
     public static void main(final String[] args) throws Exception {
+        System.out.println("Podrida version " + VERSION);
         if(args.length == 2){
             port = Utils.parsearNumero(args[0]);
             wsPort = Utils.parsearNumero(args[1]);

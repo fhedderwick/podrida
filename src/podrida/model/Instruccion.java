@@ -18,6 +18,8 @@ public enum Instruccion {
     ENVIAR_MENSAJE(80),
     INFORMAR_CAMBIO_CONEXION(90),
     EXPULSAR_JUGADOR(91),
+    PROPONER_REINICIAR(92),
+    FORZAR_JUGADOR(93),
     HEARTBEAT(95),
     INSTRUCCION_DESCONOCIDA(99);
 
@@ -40,6 +42,8 @@ public enum Instruccion {
                 case 80: return ENVIAR_MENSAJE;
                 case 90: return INFORMAR_CAMBIO_CONEXION;
                 case 91: return EXPULSAR_JUGADOR;
+                case 92: return PROPONER_REINICIAR;
+                case 93: return FORZAR_JUGADOR;
                 case 95: return HEARTBEAT;
                 default:
             }

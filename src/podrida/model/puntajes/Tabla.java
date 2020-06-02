@@ -139,6 +139,7 @@ public class Tabla {
             final JsonObject obj = entry.getValue().getAsJsonObject();
             final int puntajeFinal = obj.get("puntaje").getAsInt();
             obj.addProperty("puesto",lista.indexOf(puntajeFinal) + 1);
+            obj.addProperty("ultimoPuesto",lista.size());
         }
         return jo;
     }

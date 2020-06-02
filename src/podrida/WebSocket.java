@@ -48,6 +48,18 @@ public class WebSocket {
         return new ClientThread(socket,in,out, gameManager);
     }
     
+    public static void monocast(final ClientThread destinatario, final JsonObject msg){
+        monocast(destinatario, msg.toString());
+    }
+    
+    public static void monocast(final ClientThread destinatario, final String msg){
+        try{
+            destinatario.write(msg);
+        }catch(final Exception e){
+            e.printStackTrace();
+        }
+    }
+    
     public static void broadcast(final List<ClientThread> destinatarios, final JsonObject msg){
         broadcast(destinatarios, msg.toString());
     }
@@ -55,11 +67,7 @@ public class WebSocket {
     public static void broadcast(final List<ClientThread> destinatarios, final String msg){
         System.out.println("Broadcasting: " + msg);
         for(final ClientThread clientThread : destinatarios){
-            try{
-                clientThread.write(msg);
-            }catch(final Exception e){
-                e.printStackTrace();
-            }
+            monocast(clientThread,msg);
         }
     }
     

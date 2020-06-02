@@ -2,6 +2,7 @@ package podrida.managers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import static java.lang.System.exit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,8 +16,10 @@ import podrida.model.Espectador;
 import podrida.utils.Utils;
 import podrida.model.Instruccion;
 import static podrida.model.Instruccion.EXPULSAR_JUGADOR;
+import static podrida.model.Instruccion.FORZAR_JUGADOR;
 import podrida.model.Jugador;
 import podrida.model.User;
+import podrida.utils.Stats;
 
 public class PodridaManager extends GameManager {
 
@@ -143,6 +146,7 @@ public class PodridaManager extends GameManager {
                 }
                 WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
                 if(_juego.hasEnded()){
+                    Stats.dump(_juego.getIdPartida());
                     final Map results = _juego.getResults();
                     if(!results.isEmpty()){
                         if(!_userManager.writeStats(results)){
@@ -153,6 +157,7 @@ public class PodridaManager extends GameManager {
                     } else {
                         System.out.println("No se encontraron datos para persistir");
                     }
+                    exit(0);
                 }
                 return null;
             case ELEGIR_NUMERO:
@@ -247,6 +252,39 @@ public class PodridaManager extends GameManager {
 //                A ese jugador se le considera que pidio 0 bazas, que sus cartas son todos peores que un 4, y no tiene turno
 //                Se considera que suma siempre 0 puntos, y se le considera abandonador
 //                Broadcast 91
+//                return null;
+                return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
+            case PROPONER_REINICIAR:
+//                if (!hasStarted()) {
+//                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+//                }
+//                final User resettingUser = _userManager.getLoggedUserByToken(idSolicitante);
+//                if (resettingUser == null) {
+//                    return Utils.createJsonReply(false, instruccion, "No se encuentra el usuario");
+//                }
+//                final JsonObject resetRequestReply = Utils.createJsonReply(true, instruccion, resettingUser.getUsername() + " quiere reiniciar el juego, acepta?");
+//                WebSocket.broadcast(_juego.getOnlineThreadsJugadores(), resetRequestReply);
+//                return null;
+                return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
+            case FORZAR_JUGADOR:
+//                if (!hasStarted()) {
+//                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+//                }
+//                final User forcingUser = _userManager.getLoggedUserByToken(idSolicitante);
+//                if (forcingUser == null) {
+//                    return Utils.createJsonReply(false, instruccion, "No se encuentra el usuario");
+//                }
+//                final User forcedUser = _userManager.getUserByUserName(parametro);
+//                if(!esElTurno(forcedUser)){
+//                    return Utils.createJsonReply(false, instruccion, "No es el turno de ese jugador");
+//                }
+//                if(!timedOut(forcedUser)){
+//                    return Utils.createJsonReply(false, instruccion, "Dale tiempo a ese jugador!");
+//                }
+//                WebSocket.monocast(forcedPlayer, msg(con el token de seguridad para asegurar que es una orden));
+//                enviar mensaje a jugador forzado, con token de seguridad, que hara que se fuerze;
+//                final JsonObject resetRequestReply = Utils.createJsonReply(true, instruccion, resettingUser.getUsername() + " quiere reiniciar el juego, acepta?");
+//                WebSocket.broadcast(_juego.getOnlineThreadsJugadores(), resetRequestReply);
 //                return null;
                 return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
             case INSTRUCCION_DESCONOCIDA:

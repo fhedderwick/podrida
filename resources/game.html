@@ -98,6 +98,12 @@
                     case 91:
                         processKickReply(status, content);
                         break;
+                    case 92:
+                        processRestartSuggestion(status, content);
+                        break;
+                    case 93:
+                        processForcedPlay(status, content);
+                        break;
                     case 95:
                         processHeartbeatReply(status, content);
                         break;
@@ -873,7 +879,7 @@
                 }
             }
             ;
-            function kick(nombre){
+            function processKickReply(nombre){
                 if(username === undefined){
                     return;
                 }
@@ -885,19 +891,27 @@
                     mensaje("No se puede echar a un jugador con conexion activa!");
                 }
             };
-            function processKickReply(status, content) {
+            function processRestartSuggestion(status,content){
                 if (status) {
-                    alert("Se echara al jugador");
+                    alert("Se solicito reiniciar el juego");
                 } else {
                     mensaje(content);
                 }
-            }
-            ;
+            };
+            function processForcedPlay(status,content){
+                if (status) {
+                    alert("Se pidio jugar forzadamente");
+                } else {
+                    mensaje(content);
+                }
+            };
             function reset(){
                 if(username === undefined){
                     return;
                 }
                 if (confirm("Reiniciar juego?")) {
+                    var data = {id: username, com: "95", param: ""};
+                    socketSend(data);
                     alert("Aun no implementado");
 //                  enviar post de RESET, solo ocurrira si todos los jugadores activos aprietan alli en un lapso adecuado
                 }

@@ -21,7 +21,8 @@ import podrida.model.Instruccion;
 public class Utils {
 
     private final static Pattern REGEX_PATTERN = Pattern.compile("^[a-zA-Z0-9_$%&()=!+@#]*$");
-
+    private final static Random _random = new Random();
+    
     public static JsonObject createJsonReply(final boolean status, final Instruccion instruccion, final String content) {
         final JsonObject jo = new JsonObject();
         jo.addProperty("status", status);
@@ -146,9 +147,9 @@ public class Utils {
     }
 
     public static int getRandomInt(final int notIncludedMax) {
-        return abs(new Random().nextInt() % notIncludedMax);
+        return abs(_random.nextInt() % notIncludedMax);
     }
-
+    
     public static String readInputStream(final InputStream is, final String encoding) {
         int read;
         final StringBuilder sb = new StringBuilder();

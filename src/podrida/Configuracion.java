@@ -23,7 +23,7 @@ public class Configuracion {
     }
       
     private Configuracion() {
-        _ultimaRondaIndia = false;
+        _ultimaRondaIndia = true;
         _cantBarajas = 1;
         _cantBazasMaximaForzada = -1;
     }

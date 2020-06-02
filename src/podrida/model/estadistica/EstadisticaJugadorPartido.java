@@ -11,7 +11,7 @@ public class EstadisticaJugadorPartido {
     private final int _cantJugadores;
     private final int _cantBarajas;
     private final int _puntosObtenidos;
-    private final int _cantBazasJugadas;
+    private final int _ultimoPuesto;
     private final int _puesto;
     private final List<Baza> _bazas;
     private int _bazasTotalesLlevadas = 0;
@@ -37,12 +37,12 @@ public class EstadisticaJugadorPartido {
         _idPartido = split[0];
         _cantJugadores = Integer.valueOf(split[1]);
         _cantBarajas = Integer.valueOf(split[2]);
-        _cantBazasJugadas = Integer.valueOf(split[3]);
+        _ultimoPuesto = Integer.valueOf(split[3]);
         _puntosObtenidos = Integer.valueOf(split[4]);
         _puesto = Integer.valueOf(split[5]);
         _bazas = new ArrayList<>();
         if(_puesto != -1){
-            for(int i=6;i < 6 + 2*_cantBazasJugadas;i+=2){
+            for(int i=6;i < split.length ; i+=2){
                 final int pedido = Integer.valueOf(split[i]);
                 final int llevado = Integer.valueOf(split[i+1]);
                 final Baza baza = new Baza(pedido,llevado);
@@ -58,11 +58,11 @@ public class EstadisticaJugadorPartido {
         }
     }
 
-    public EstadisticaJugadorPartido(final String idPartida, final int cantJugadores, final int cantBarajas, final int bazasJugadas, final int puntaje, int puesto, final List<Baza> bazas) {
+    public EstadisticaJugadorPartido(final String idPartida, final int cantJugadores, final int cantBarajas, final int ultimoPuesto, final int puntaje, int puesto, final List<Baza> bazas) {
         _idPartido = idPartida;
         _cantJugadores = cantJugadores;
         _cantBarajas = cantBarajas;
-        _cantBazasJugadas = bazasJugadas;
+        _ultimoPuesto = ultimoPuesto;
         _puntosObtenidos = puntaje;
         _puesto = puesto;
         _bazas = bazas;
@@ -96,10 +96,10 @@ public class EstadisticaJugadorPartido {
         return _puntosObtenidos;
     }
 
-    public int getCantBazasJugadas() {
-        return _cantBazasJugadas;
+    public int getUltimoPuesto() {
+        return _ultimoPuesto;
     }
-
+    
     public int getPuesto() {
         return _puesto;
     }
@@ -126,7 +126,7 @@ public class EstadisticaJugadorPartido {
         sb.append(_idPartido).append(SEMICOLON);
         sb.append(_cantJugadores).append(SEMICOLON);
         sb.append(_cantBarajas).append(SEMICOLON);
-        sb.append(_cantBazasJugadas).append(SEMICOLON);
+        sb.append(_ultimoPuesto).append(SEMICOLON);
         sb.append(_puntosObtenidos).append(SEMICOLON);
         sb.append(_puesto).append(SEMICOLON);
         for(final Baza baza : _bazas){

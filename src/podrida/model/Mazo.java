@@ -9,7 +9,7 @@ public class Mazo {
 
     private final List<Carta> _mazo;
     private final int _cantMaximaCartas;
-
+    
     public void devolverAlMazo(final Carta carta){
         _mazo.add(carta);
     }
@@ -44,11 +44,7 @@ public class Mazo {
         return _cantMaximaCartas;
     }
     
-    public final void addBarajaEspanola(){
-        addBarajaEspanola("");
-    }
-    
-    public final void addBarajaEspanola(final String prefix){
+    private void addBarajaEspanola(final String prefix){
         _mazo.add(new Carta(Carta.Valor.UNO, Carta.Palo.ESPADA, 14, prefix + "1E"));
         _mazo.add(new Carta(Carta.Valor.DOS, Carta.Palo.ESPADA, 9, prefix + "2E"));
         _mazo.add(new Carta(Carta.Valor.TRES, Carta.Palo.ESPADA, 10, prefix + "3E"));
@@ -93,5 +89,5 @@ public class Mazo {
         _mazo.add(new Carta(Carta.Valor.ONCE, Carta.Palo.COPA, 6, prefix + "11C"));
         _mazo.add(new Carta(Carta.Valor.DOCE, Carta.Palo.COPA, 7, prefix + "12C"));
     }
-    
+
 }
