@@ -17,10 +17,10 @@ import podrida.utils.MensajesEstandar;
 
 public class Podrida {
 
-    private static final int VERSION = 7;
+    private static final int VERSION = 8;
     
-    private static int port = 8000;
-    private static int wsPort = 8001;
+    private static int port = 8003;
+    private static int wsPort = 8004;
     private static int maxConnections = 10;
     
     public static void main(final String[] args) throws Exception {

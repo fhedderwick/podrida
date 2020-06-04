@@ -16,9 +16,9 @@ import podrida.utils.Utils;
 import podrida.model.Instruccion;
 import static podrida.model.Instruccion.EXPULSAR_JUGADOR;
 import static podrida.model.Instruccion.FORZAR_JUGADOR;
+import static podrida.model.Instruccion.VER_TABLA_CARTAS;
 import podrida.model.Jugador;
 import podrida.model.User;
-import podrida.utils.Stats;
 
 public class PodridaManager extends GameManager {
 
@@ -136,6 +136,15 @@ public class PodridaManager extends GameManager {
                     return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
                 }
                 return Utils.createJsonReply(true, instruccion, _juego.getTabla());
+            case VER_TABLA_CARTAS:
+                if (!hasStarted()) {
+                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+                }
+                final JsonArray tablaCartasAsHtml = _juego.getTablaCartasAsHtmlTable();
+                if(tablaCartasAsHtml == null){
+                    return Utils.createJsonReply(false, instruccion, "Se podra ver al finalizar el partido");
+                }
+                return Utils.createJsonReply(true, instruccion, tablaCartasAsHtml);
             case TIRAR_CARTA:
                 if (!hasStarted()) {
                     return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
@@ -146,7 +155,6 @@ public class PodridaManager extends GameManager {
                 }
                 WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
                 if(_juego.hasEnded()){
-                    Stats.dump(_juego.getIdPartida());
                     final Map results = _juego.getResults();
                     if(!results.isEmpty()){
                         if(_userManager.writeStats(results)){
@@ -281,16 +289,7 @@ public class PodridaManager extends GameManager {
                 if (!reply.get("status").getAsBoolean()) {
                     return reply;
                 }
-                //broadcasteo la jugada forzada
                 WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
-                //fuerzo pantalla del jugador forzado
-//                if(threadJugadorForzado.isConnected()){
-                    //que quite una carta de mi mano, y que avance el turno
-//                    final JsonObject forcePlayMessage = new JsonObject();
-//                    forcePlayMessage.addProperty("forcingUser",forcingUser.getUsername());
-//                    forcePlayMessage.addProperty("token",jugadorForzado.getUserToken());
-//                    WebSocket.monocast(threadJugadorForzado, Utils.createJsonReply(true, instruccion, forcePlayMessage));
-//                }
                 return null;
             case INSTRUCCION_DESCONOCIDA:
             default:

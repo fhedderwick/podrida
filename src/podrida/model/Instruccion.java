@@ -15,6 +15,7 @@ public enum Instruccion {
     VER_ESTADISTICAS_USUARIO(9),
     CONFIGURAR_JUEGO(10),
     REGISTRAR_ESPECTADOR(11),
+    VER_TABLA_CARTAS(12),
     ENVIAR_MENSAJE(80),
     INFORMAR_CAMBIO_CONEXION(90),
     EXPULSAR_JUGADOR(91),
@@ -39,6 +40,7 @@ public enum Instruccion {
                 case 9: return VER_ESTADISTICAS_USUARIO;
                 case 10: return CONFIGURAR_JUEGO;
                 case 11: return REGISTRAR_ESPECTADOR;
+                case 12: return VER_TABLA_CARTAS;
                 case 80: return ENVIAR_MENSAJE;
                 case 90: return INFORMAR_CAMBIO_CONEXION;
                 case 91: return EXPULSAR_JUGADOR;

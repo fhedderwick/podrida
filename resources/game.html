@@ -89,6 +89,9 @@
                     case 11:
                         processEspectadorReply(status, content);
                         break;
+                    case 12:
+                        processGetTableCartasReply(status, content);
+                        break;
                     case 80:
                         chatMessage(status, content);
                         break;
@@ -116,7 +119,7 @@
             function processJoinGameReply(status, content) {
                 if (status) {
                     var reply = JSON.parse(content);
-                    setTimeout(heartbeat,7500);
+                    setTimeout(heartbeat, 7500);
                     if (reply.hasOwnProperty('username')) {
 //                        userId = reply.userId;
                         username = reply.username;
@@ -167,7 +170,7 @@
             function processEspectadorReply(status, content) {
                 if (status) {
                     var data = JSON.parse(content);
-                    setTimeout(heartbeat,7500);
+                    setTimeout(heartbeat, 7500);
                     recargarDatosJuego(data);
                 } else {
                     mensaje(content);
@@ -240,6 +243,22 @@
                 }
             }
             ;
+            function processGetTableCartasReply(status, content) {
+                if (status) {
+                    var data = JSON.parse(content);
+                    var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    htmlContent += "<table class='bordered padded'>";
+                    for (var x in data) {
+                        htmlContent += data[x];
+                    }
+                    htmlContent += "</table>";
+                    htmlContent += "<button onclick='closeTable()'>CERRAR TABLA</button>";
+                    $("#tableContainer").empty().append(htmlContent);
+                } else {
+                    mensaje(content);
+                }
+            }
+            ;
             function processPlayCardReply(status, content) {
                 if (status) {
                     var reply = JSON.parse(content);
@@ -273,7 +292,7 @@
                                 playSound();
                                 mensaje("Te toca tirar");
                             }
-                            setTimeout(clearPlayedCards,2000);
+                            setTimeout(clearPlayedCards, 2000);
                         }
                     } else { //proxima jugada de esta baza
                         if (reply.turnoActual == orden) {
@@ -372,7 +391,7 @@
             ;
 
             function closeTable() {
-                estadisticasPedidas=[];
+                estadisticasPedidas = [];
                 $("#tableContainer").empty().append("-");
             }
 
@@ -395,7 +414,7 @@
                 if (status) {
                     var datos = JSON.parse(content);
                     var element = document.getElementById("square_" + datos.nombre);
-                    if(element !== undefined && element !== null){
+                    if (element !== undefined && element !== null) {
                         if (datos.conexion) {
                             mensaje(datos.nombre + ' se reconecto');
                             element.classList.remove("crossed");
@@ -694,7 +713,10 @@
                 appendable += "<button onclick='mensajeEstandar(3)'>FARAONICO</button>";
                 appendable += "<button onclick='mensajeEstandar(4)'>ASI NO</button>";
                 appendable += "<button onclick='mensajeEstandar(5)'>LA QUIERE</button>";
+                appendable += "<button onclick='mensajeEstandar(6)'>REGALADA</button>";
+                appendable += "<button onclick='mensajeEstandar(7)'>DESCARTE</button>";
                 appendable += "<button onclick='verTabla()'>TABLA</button>";
+                appendable += "<button onclick='verTablaCartas()'>CARTAS</button>";
                 appendable += "<button onclick='sendChatClick()'>CHAT</button>";
                 appendable += "<button disabled onclick='reset()'>REINICIAR</button>";
                 appendable += "<input onclick='toggleSound()' type='checkbox'";
@@ -718,7 +740,7 @@
             ;
 
             function solicitarTirarClick(carta) {
-                if(username === undefined){
+                if (username === undefined) {
                     return;
                 }
                 vaciarMensaje();
@@ -729,7 +751,7 @@
             ;
 
             function solicitarElegirClick(n) {
-                if(username === undefined){
+                if (username === undefined) {
                     return;
                 }
                 vaciarMensaje();
@@ -760,6 +782,13 @@
             function verTabla() {
                 vaciarMensaje();
                 var data = {id: userId, com: "3", param: ""};
+                socketSend(data);
+            }
+            ;
+
+            function verTablaCartas() {
+                vaciarMensaje();
+                var data = {id: userId, com: "12", param: ""};
                 socketSend(data);
             }
             ;
@@ -831,26 +860,28 @@
                 };
             }
             ;
-            function heartbeat(){
-                if(heartbeatStatus){
+            function heartbeat() {
+                if (heartbeatStatus) {
                     heartbeatStatus = false;
                     var data = {id: username, com: "95", param: ""};
-                    setTimeout(heartbeat,7500);
+                    setTimeout(heartbeat, 7500);
                     socketSend(data);
                 } else {
-                    if(username !== undefined){
+                    if (username !== undefined) {
                         var elem = document.getElementById("square_" + username);
-                        if(elem !== undefined && elem !== null){
+                        if (elem !== undefined && elem !== null) {
                             elem.classList.add("crossed");
                         }
                     }
                     alert("Se ha perdido la conexion. Refresque el navegador e ingrese nuevamente.");
 //                    openSocket(username);
                 }
-            };
-            function processHeartbeatReply(){
-              heartbeatStatus = true;
-            };
+            }
+            ;
+            function processHeartbeatReply() {
+                heartbeatStatus = true;
+            }
+            ;
             function leaderboardButtonClick() {
                 vaciarMensaje();
                 var data = {id: userId, com: "8", param: ""};
@@ -879,62 +910,68 @@
                 }
             }
             ;
-            function kick(nombre){
-                if(nombre === undefined){
+            function kick(nombre) {
+                if (nombre === undefined) {
                     return;
                 }
-                if(document.getElementById("square_" + nombre).classList.contains("crossed")){
+                if (document.getElementById("square_" + nombre).classList.contains("crossed")) {
                     vaciarMensaje();
                     var data = {id: userId, com: "91", param: nombre};
                     socketSend(data);
                 } else {
                     mensaje("No se puede echar a un jugador con conexion activa!");
                 }
-            };
-            function processKickReply(status,content){
+            }
+            ;
+            function processKickReply(status, content) {
                 if (status) {
                     alert("Se solicito echar un jugador");
                 } else {
                     mensaje(content);
                 }
-            };
-            function processRestartSuggestion(status,content){
+            }
+            ;
+            function processRestartSuggestion(status, content) {
                 if (status) {
                     alert("Se solicito reiniciar el juego");
                 } else {
                     mensaje(content);
                 }
-            };
-            function forzar(nombre){
-                if(nombre === undefined){
+            }
+            ;
+            function forzar(nombre) {
+                if (nombre === undefined) {
                     return;
                 }
                 var data = {id: userId, com: "93", param: nombre};
                 socketSend(data);
-            };
-            function reset(){
+            }
+            ;
+            function reset() {
                 if (confirm("Reiniciar juego?")) {
                     var data = {id: username, com: "95", param: ""};
                     socketSend(data);
                     alert("Aun no implementado");
 //                  enviar post de RESET, solo ocurrira si todos los jugadores activos aprietan alli en un lapso adecuado
                 }
-            };
-            function verEstadisticasUsuario(nombre){
+            }
+            ;
+            function verEstadisticasUsuario(nombre) {
                 vaciarMensaje();
                 estadisticasPedidas.push(nombre);
                 var data = {id: userId, com: "9", param: JSON.stringify(estadisticasPedidas)};
                 socketSend(data);
-            };
+            }
+            ;
             function processVerEstadisticasUsuarioReply(status, content) {
                 if (status) {
                     var data = JSON.parse(content);
-                    if(estadisticasPedidas.length === 0){
+                    if (estadisticasPedidas.length === 0) {
                         closeTable();
                     }
                     var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
                     htmlContent += "<table class='bordered padded'>";
-                    for(var x in data){
+                    for (var x in data) {
                         htmlContent += data[x];
                     }
                     htmlContent += "</table>";

@@ -42,8 +42,19 @@ public class Carta implements Comparable<Carta>{
         return this.getValorRelativo() - other.getValorRelativo();
     }
 
+    public String getReadableName() {
+        return _valor.getCode() + " de " + _palo.name();
+    }
+
     public enum Valor{
-        UNO, DOS, TRES, CUATRO, CINCO, SEIS, SIETE, DIEZ, ONCE, DOCE;
+        UNO(1), DOS(2), TRES(3), CUATRO(4), CINCO(5), SEIS(6), SIETE(7), DIEZ(10), ONCE(11), DOCE(12);
+        final int _code;
+        private Valor(final int code){
+            _code = code;
+        }
+        private int getCode() {
+            return _code;
+        }
     };
     public enum Palo{
         ESPADA, BASTO, ORO, COPA;

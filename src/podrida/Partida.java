@@ -44,6 +44,7 @@ public class Partida {
     private int _bazasDeLaRondaMaxima;
     private int _sumaElegidos = 0;
     private Long _time = System.currentTimeMillis();
+    private Stats _stats;
 
     public Partida(final List<Jugador> candidatos, final Configuracion configuracion) {
         _idPartida = UUID.randomUUID().toString();
@@ -53,6 +54,7 @@ public class Partida {
         _timer = new Timer();
         setTurno(0);
         _mazo = new Mazo(configuracion.getCantBarajas());
+        _stats = new Stats(_mazo);
         final int cantBazasMaximaForzada = _configuracion.getCantBazasMaximaForzada();
         final int cantBazasMaximaCalculada = _mazo.getCantMaximaCartas()/ _jugadores.size();
         if(cantBazasMaximaForzada < 3 || cantBazasMaximaForzada > cantBazasMaximaCalculada){
@@ -92,7 +94,7 @@ public class Partida {
                 }
                 for (final Jugador jugador : _jugadores) {
                     final List<Carta> cartas = _mazo.getCartas(_bazasQueDebenJugarseEstaRonda);
-                    Stats.logCartasParaJugador(jugador,cartas);
+                    _stats.logCartasParaJugador(jugador,cartas);
                     jugador.recibirCartas(cartas);
                 }
                 _momentoRepartir = false;
@@ -147,6 +149,7 @@ public class Partida {
                                 _momentoTirar = false;
                                 _momentoElegir = false;
                                 _ended = true;
+                                _stats.dump(_idPartida);
                                 return Utils.createJsonReply(true,Instruccion.TIRAR_CARTA,reply);
                             }
                             _momentoRepartir = true;
@@ -503,6 +506,13 @@ public class Partida {
     //sincronizado previamente mediante request solicitud de forzado
     private JsonObject forzarElegir(final Jugador jugador){
         return elegir(jugador.getUserToken(), (getNumeroNoValido() == 0 ? 1 : 0));
+    }
+
+    public JsonArray getTablaCartasAsHtmlTable() {
+        if(_ended){
+            return _stats.getAsHtmlTable();
+        }
+        return null;
     }
     
 }
