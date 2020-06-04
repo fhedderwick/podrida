@@ -50,7 +50,7 @@ public class EstadisticasUsuario {
         if(ejp.getPuesto() == 2){
             _partidosSegundo++;
         }
-        if(ejp.getPuesto() == ejp.getUltimoPuesto() && ejp.getUltimoPuesto() > 2){
+        if(ejp.getPuesto() == ejp.getCantJugadores() || (ejp.getPuesto() == ejp.getUltimoPuesto() && ejp.getUltimoPuesto() > 2)){
             _partidosUltimo++;
         }
         if(ejp.getPuesto() == -1){

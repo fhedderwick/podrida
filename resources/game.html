@@ -101,9 +101,9 @@
                     case 92:
                         processRestartSuggestion(status, content);
                         break;
-                    case 93:
-                        processForcedPlay(status, content);
-                        break;
+//                    case 93:
+//                        processForcedPlay(status, content);
+//                        break;
                     case 95:
                         processHeartbeatReply(status, content);
                         break;
@@ -879,8 +879,8 @@
                 }
             }
             ;
-            function processKickReply(nombre){
-                if(username === undefined){
+            function kick(nombre){
+                if(nombre === undefined){
                     return;
                 }
                 if(document.getElementById("square_" + nombre).classList.contains("crossed")){
@@ -891,6 +891,13 @@
                     mensaje("No se puede echar a un jugador con conexion activa!");
                 }
             };
+            function processKickReply(status,content){
+                if (status) {
+                    alert("Se solicito echar un jugador");
+                } else {
+                    mensaje(content);
+                }
+            };
             function processRestartSuggestion(status,content){
                 if (status) {
                     alert("Se solicito reiniciar el juego");
@@ -898,17 +905,14 @@
                     mensaje(content);
                 }
             };
-            function processForcedPlay(status,content){
-                if (status) {
-                    alert("Se pidio jugar forzadamente");
-                } else {
-                    mensaje(content);
-                }
-            };
-            function reset(){
-                if(username === undefined){
+            function forzar(nombre){
+                if(nombre === undefined){
                     return;
                 }
+                var data = {id: userId, com: "93", param: nombre};
+                socketSend(data);
+            };
+            function reset(){
                 if (confirm("Reiniciar juego?")) {
                     var data = {id: username, com: "95", param: ""};
                     socketSend(data);

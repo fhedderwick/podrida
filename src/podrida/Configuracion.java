@@ -69,4 +69,13 @@ public class Configuracion {
         return sb.toString();
     }
 
+    public Long getExpirationMillis(final int vecesForzado) {
+        switch(vecesForzado){
+            case 0: return (long) 120000; //2 minutos la primera vez
+            case 1: return (long) 60000; //1 minuto la segunda vez
+            case 2: return (long) 30000; //30 segundos la tercera vez
+        }
+        return (long) 0; //Se puede forzar directamente
+    }
+
 }

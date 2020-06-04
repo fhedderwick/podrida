@@ -17,7 +17,7 @@ import podrida.utils.MensajesEstandar;
 
 public class Podrida {
 
-    private static final int VERSION = 6;
+    private static final int VERSION = 7;
     
     private static int port = 8000;
     private static int wsPort = 8001;

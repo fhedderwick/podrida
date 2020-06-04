@@ -2,7 +2,6 @@ package podrida.managers;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import static java.lang.System.exit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,18 +40,19 @@ public class PodridaManager extends GameManager {
     }
 
     public synchronized JsonObject processRequest(final ClientThread invoker, final String requestBody) {
-        System.out.println("Request recibido: " + requestBody);
-//        if(requestBody.length() > ){
-//            return Utils.createJsonReply(false,Instruccion.INSTRUCCION_DESCONOCIDA,"Mensaje demasiado largo.");
-//        }
         final RequestBody body = RequestBody.parseRequestBody(requestBody);
         if (body == null) {
+            System.out.println("Request erroneo recibido: " + requestBody);
             return Utils.createJsonReply(false, Instruccion.INSTRUCCION_DESCONOCIDA, "ERROR");
         }
         final String idSolicitante = body.getIdSolicitante();
         final Instruccion instruccion = body.getInstruccion();
         final String parametro = body.getParametro();
 
+        if(Instruccion.HEARTBEAT != instruccion){
+            System.out.println("Request recibido: " + requestBody);
+        }
+        
         final JsonObject reply;
         switch (instruccion) {
             case ENTRAR:
@@ -149,7 +149,7 @@ public class PodridaManager extends GameManager {
                     Stats.dump(_juego.getIdPartida());
                     final Map results = _juego.getResults();
                     if(!results.isEmpty()){
-                        if(!_userManager.writeStats(results)){
+                        if(_userManager.writeStats(results)){
                             System.out.println("Se guardo la estadistica de esta partida");
                         } else {
                             System.out.println("Error al guardar la estadistica de esta partida");
@@ -157,7 +157,7 @@ public class PodridaManager extends GameManager {
                     } else {
                         System.out.println("No se encontraron datos para persistir");
                     }
-                    exit(0);
+//                    exit(0);
                 }
                 return null;
             case ELEGIR_NUMERO:
@@ -267,26 +267,31 @@ public class PodridaManager extends GameManager {
 //                return null;
                 return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
             case FORZAR_JUGADOR:
-//                if (!hasStarted()) {
-//                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+                if (!hasStarted()) {
+                    return Utils.createJsonReply(false, instruccion, "Aun no ha empezado la partida");
+                }
+                final User forcingUser = _userManager.getLoggedUserByToken(idSolicitante);
+                if (forcingUser == null) {
+                    return Utils.createJsonReply(false, instruccion, "No se encuentra el usuario");
+                }
+                if(forcingUser.getUsername().equals(parametro)){
+                    return Utils.createJsonReply(false, instruccion, "No se puede autoforzar!");
+                }
+                reply = _juego.forzarJugada(parametro);
+                if (!reply.get("status").getAsBoolean()) {
+                    return reply;
+                }
+                //broadcasteo la jugada forzada
+                WebSocket.broadcast(_juego.getOnlineThreadsJugadoresYEspectadores(), reply);
+                //fuerzo pantalla del jugador forzado
+//                if(threadJugadorForzado.isConnected()){
+                    //que quite una carta de mi mano, y que avance el turno
+//                    final JsonObject forcePlayMessage = new JsonObject();
+//                    forcePlayMessage.addProperty("forcingUser",forcingUser.getUsername());
+//                    forcePlayMessage.addProperty("token",jugadorForzado.getUserToken());
+//                    WebSocket.monocast(threadJugadorForzado, Utils.createJsonReply(true, instruccion, forcePlayMessage));
 //                }
-//                final User forcingUser = _userManager.getLoggedUserByToken(idSolicitante);
-//                if (forcingUser == null) {
-//                    return Utils.createJsonReply(false, instruccion, "No se encuentra el usuario");
-//                }
-//                final User forcedUser = _userManager.getUserByUserName(parametro);
-//                if(!esElTurno(forcedUser)){
-//                    return Utils.createJsonReply(false, instruccion, "No es el turno de ese jugador");
-//                }
-//                if(!timedOut(forcedUser)){
-//                    return Utils.createJsonReply(false, instruccion, "Dale tiempo a ese jugador!");
-//                }
-//                WebSocket.monocast(forcedPlayer, msg(con el token de seguridad para asegurar que es una orden));
-//                enviar mensaje a jugador forzado, con token de seguridad, que hara que se fuerze;
-//                final JsonObject resetRequestReply = Utils.createJsonReply(true, instruccion, resettingUser.getUsername() + " quiere reiniciar el juego, acepta?");
-//                WebSocket.broadcast(_juego.getOnlineThreadsJugadores(), resetRequestReply);
-//                return null;
-                return Utils.createJsonReply(false, instruccion, "Aun no esta implementado");
+                return null;
             case INSTRUCCION_DESCONOCIDA:
             default:
         };

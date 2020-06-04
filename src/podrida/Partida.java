@@ -19,6 +19,7 @@ import podrida.model.Instruccion;
 import podrida.model.estadistica.EstadisticaJugadorPartido;
 import podrida.utils.MensajesEstandar;
 import podrida.utils.Stats;
+import podrida.utils.Timer;
 import podrida.utils.Utils;
 
 public class Partida {
@@ -27,6 +28,7 @@ public class Partida {
     private final List<Jugador> _jugadores;
     private final List<Espectador> _espectadores;
     private final Configuracion _configuracion;
+    private final Timer _timer;
     private final Mazo _mazo;
     private final Tabla _tabla;
     private boolean _momentoElegir;
@@ -48,7 +50,8 @@ public class Partida {
         _jugadores = loadJugadores(candidatos,_idPartida);
         _espectadores = new ArrayList<>();
         _configuracion = configuracion;
-        _jugadorTurno = 0;
+        _timer = new Timer();
+        setTurno(0);
         _mazo = new Mazo(configuracion.getCantBarajas());
         final int cantBazasMaximaForzada = _configuracion.getCantBazasMaximaForzada();
         final int cantBazasMaximaCalculada = _mazo.getCantMaximaCartas()/ _jugadores.size();
@@ -128,7 +131,7 @@ public class Partida {
                         //en este momento el turno lo tiene el que tiro primero en esta baza
                         int ganadorBaza = calcularGanadorBaza();
                         _jugadores.get(ganadorBaza).sumarBaza();
-                        _jugadorTurno = ganadorBaza;
+                        setTurno(ganadorBaza);
                         _bazasJugadas++;
                         if (_bazasJugadas == _bazasQueDebenJugarseEstaRonda) {
                             final JsonObject puntajesRonda = _tabla.calcularPuntajesRonda(_jugadores);
@@ -148,7 +151,7 @@ public class Partida {
                             }
                             _momentoRepartir = true;
                             _momentoTirar = false;
-                            _jugadorTurno = _jugadorManoInicial; //turno del que reparte
+                            setTurno(_jugadorManoInicial); //turno del que reparte
                             reply.addProperty("ganadorBaza", ganadorBaza);
                             reply.addProperty("bazasActuales", _jugadores.get(ganadorBaza).getBazasGanadas());
                             reply.addProperty("jugador", jugadorTiradorIndex);
@@ -260,6 +263,11 @@ public class Partida {
     private boolean esElTurno(final Jugador jugador) {
         return jugador == _jugadores.get(_jugadorTurno);
     }
+    
+    private void setTurno(final int val){
+        _jugadorTurno = val;
+        _timer.restart();
+    }
 
     private boolean numeroValido(final int numeroElegido) {
         if(numeroElegido > _bazasQueDebenJugarseEstaRonda){
@@ -310,7 +318,7 @@ public class Partida {
     
     private void pasarTurno(){
 //        if(true) return;
-        _jugadorTurno = (_jugadorTurno + 1) % _jugadores.size();
+        setTurno((_jugadorTurno + 1) % _jugadores.size());
     }
 
     private String crearMensajeDesviacion() {
@@ -457,6 +465,44 @@ public class Partida {
     
     public String getIdPartida(){
         return _idPartida;
+    }
+
+    public JsonObject forzarJugada(final String parametro) {
+        final Jugador jugador = getJugadorByUsername(parametro);
+        if(!esElTurno(jugador)){
+            return Utils.createJsonReply(false, Instruccion.FORZAR_JUGADOR, "No es el turno de ese jugador");
+        }
+        final Long elapsedMillis = _timer.getElapsedMillis();
+        if(elapsedMillis < _configuracion.getExpirationMillis(jugador.getVecesForzado())){
+            return Utils.createJsonReply(false, Instruccion.FORZAR_JUGADOR, "Dale tiempo a ese jugador!");
+        }
+        final JsonObject reply;
+        if(_momentoTirar){
+            reply = forzarTirar(jugador);
+        } else if(_momentoElegir){
+            reply = forzarElegir(jugador);
+        }else{
+            return Utils.createJsonReply(false, Instruccion.FORZAR_JUGADOR, "No se puede forzar esta jugada");
+        }
+        if (reply.get("status").getAsBoolean()) {
+            jugador.sumarJugadaForzada();
+        }
+        return reply;
+    }
+    
+    //sincronizado previamente mediante request solicitud de forzado
+    private JsonObject forzarTirar(final Jugador jugador){
+        final JsonArray cartas = jugador.peekCartas();
+        if(cartas.size() < 1){
+            return Utils.createJsonReply(false, Instruccion.FORZAR_JUGADOR, "No se encontraron cartas para tirar");
+        }
+        final String idCarta = cartas.get(0).getAsString();
+        return tirar(jugador.getUserToken(), idCarta);
+    }
+    
+    //sincronizado previamente mediante request solicitud de forzado
+    private JsonObject forzarElegir(final Jugador jugador){
+        return elegir(jugador.getUserToken(), (getNumeroNoValido() == 0 ? 1 : 0));
     }
     
 }

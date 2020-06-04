@@ -33,10 +33,13 @@ public abstract class Board {
         sb.append("' class='bordered padded'><td align='center' colspan='3'>");
         sb.append(name);
         sb.append("</td></tr>");
-        sb.append("<tr><td><button onclick='verEstadisticasUsuario(\"");
+        sb.append("<tr><td style='text-align:center;vertical-align:middle'><button onclick='verEstadisticasUsuario(\"");
         sb.append(name);
         sb.append("\")'>STATS</td>");
-        sb.append("<td></td><td><button disabled onclick='kick(\"");
+        sb.append("<td style='text-align:center;vertical-align:middle'><button onclick='forzar(\"");
+        sb.append(name);
+        sb.append("\")'>FORZAR</td>");
+        sb.append("<td style='text-align:center;vertical-align:middle'><button disabled onclick='kick(\"");
         sb.append(name);
         sb.append("\")'>ECHAR</td>");
         sb.append("</td></tr>");

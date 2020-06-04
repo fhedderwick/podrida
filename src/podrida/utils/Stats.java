@@ -59,7 +59,7 @@ public class Stats {
                 fw.write("\tCartas de jugador: " + entry.getKey());
                 fw.write(System.lineSeparator());
                 for(final Entry<String, Integer> subentry : entry.getValue().entrySet()){
-                    fw.write("\t" + subentry.getKey() + "\t" + subentry.getValue());
+                    fw.write("\t\t" + subentry.getKey() + "\t" + subentry.getValue());
                     fw.write(System.lineSeparator());
                 }
             }

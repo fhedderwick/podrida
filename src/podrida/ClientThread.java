@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.List;
 import podrida.managers.GameManager;
+import podrida.model.Instruccion;
 import podrida.model.User;
 
 public class ClientThread extends Thread{
@@ -88,7 +89,9 @@ public class ClientThread extends Thread{
     private void attendText(final String framePayload) throws IOException{
         final JsonObject jo = _gameManager.processRequest(this,framePayload);
         if(jo != null){
-            System.out.println("Enviando a " + (_user != null ? _user.getUsername() : "espectador") + ": " + jo.toString());
+            if(!jo.has("code") || Instruccion.HEARTBEAT.getCode() != jo.get("code").getAsInt()){
+                System.out.println("Enviando a " + (_user != null ? _user.getUsername() : "espectador") + ": " + jo.toString());
+            }
             write(jo.toString());
         }
     }

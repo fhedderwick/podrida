@@ -16,6 +16,7 @@ public class Jugador implements Comparable<Jugador>{
     
     private Carta _cartaJugada = null;
     private int _numeroElegido;
+    private int _vecesForzado = 0;
     
     public Jugador(final ClientThread clientThread) {
         _clientThread = clientThread;
@@ -151,4 +152,12 @@ public class Jugador implements Comparable<Jugador>{
         _idPartidaActual = idPartidaActual;
     }
     
+    public int getVecesForzado(){
+        return _vecesForzado;
+    }
+    
+    public void sumarJugadaForzada(){
+        _vecesForzado++;
+    }
+
 }
