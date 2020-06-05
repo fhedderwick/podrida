@@ -63,14 +63,26 @@ public class Stats {
     public JsonArray getAsHtmlTable() {
         final JsonArray ja = new JsonArray();
         try{
-            ja.add("<tr class='bordered padded'><td class='bordered padded'>Carta</td><td class='bordered padded'>Apariciones</td></tr>");
+            final StringBuilder header = new StringBuilder();
+            header.append("<tr class='bordered padded'>");
+            header.append("<th hidden class='bordered padded'>");
+            header.append("-");
+            header.append("</th><th class='bordered padded'>");
+            header.append("<button onclick='sortTable(\"tablaCartas\",0,true)'>Carta</button>");
+            header.append("</th><th class='bordered padded'>");
+            header.append("<button onclick='sortTable(\"tablaCartas\",2,true)'>Apariciones</button>");
+            header.append("</th></tr>");
+            ja.add(header.toString());
             for(final Entry<Carta, List<String>> entry : _mapa.entrySet()){
                 final int apariciones = entry.getValue().size();
                 if(apariciones == 0){
                     continue;
                 }
                 final StringBuilder sb = new StringBuilder();
-                sb.append("<tr class='bordered padded'><td class='bordered padded'>");
+                
+                sb.append("<tr class='bordered padded'><td hidden class='bordered padded'>");
+                sb.append(entry.getKey().getValorRelativo());
+                sb.append("</td><td class='bordered padded'>");
                 sb.append(entry.getKey().getReadableName());
                 sb.append("</td><td class='bordered padded'>");
                 sb.append(apariciones);

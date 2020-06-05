@@ -243,11 +243,68 @@
                 }
             }
             ;
+            function sortTable(tableName,sortingColumn,isNumeric){
+                if(!sortTableWithOrder(tableName,sortingColumn,isNumeric,true)){
+                    sortTableWithOrder(tableName,sortingColumn,isNumeric,false);
+                }
+            };
+            function sortTableWithOrder(tableName,sortingColumn,isNumeric,ascendant){
+                var table, rows, switching, i, x, y, shouldSwitch, anySwitched;
+                table = document.getElementById(tableName);
+                switching = true;
+                anySwitched = false;
+                /* Make a loop that will continue until
+                no switching has been done: */
+                while (switching) {
+                  // Start by saying: no switching is done:
+                  switching = false;
+                  rows = table.rows;
+                  /* Loop through all table rows (except the
+                  first, which contains table headers): */
+                  for (i = 1; i < (rows.length - 1); i++) {
+                    // Start by saying there should be no switching:
+                    shouldSwitch = false;
+                    /* Get the two elements you want to compare,
+                    one from current row and one from the next: */
+                    x = rows[i].getElementsByTagName("TD")[sortingColumn];
+                    y = rows[i + 1].getElementsByTagName("TD")[sortingColumn];
+                    // Check if the two rows should switch place:
+                    var firstData = x.innerHTML.toLowerCase();
+                    var secondData = y.innerHTML.toLowerCase();
+                    if(isNumeric){
+                        firstData = parseInt(firstData);
+                        secondData = parseInt(secondData);
+                    }
+                    if(ascendant){
+                        if (firstData > secondData) {
+                            // If so, mark as a switch and break the loop:
+                            shouldSwitch = true;
+                            anySwitched = true;
+                            break;
+                        }
+                    } else {
+                        if (firstData < secondData) {
+                            // If so, mark as a switch and break the loop:
+                            shouldSwitch = true;
+                            anySwitched = true;
+                            break;
+                        }
+                    }
+                  }
+                  if (shouldSwitch) {
+                    /* If a switch has been marked, make the switch
+                    and mark that a switch has been done: */
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                  }
+                }
+                return anySwitched;
+            }
             function processGetTableCartasReply(status, content) {
                 if (status) {
                     var data = JSON.parse(content);
                     var htmlContent = "<button onclick='closeTable()'>CERRAR TABLA</button>";
-                    htmlContent += "<table class='bordered padded'>";
+                    htmlContent += "<table id='tablaCartas' class='bordered padded'>";
                     for (var x in data) {
                         htmlContent += data[x];
                     }
